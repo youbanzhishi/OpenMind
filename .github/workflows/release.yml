@@ -16,6 +16,7 @@ jobs:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
@@ -29,7 +30,7 @@ jobs:
             artifact: openmind-x86_64-macos
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact: openmind-x86_64-windows.exe
+            artifact: openmind-x86_64-windows
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -51,22 +52,22 @@ jobs:
       - name: Prepare artifact (Unix)
         if: runner.os != 'Windows'
         run: |
+          mkdir -p dist
           cd target/${{ matrix.target }}/release
-          tar czf /tmp/${{ matrix.artifact }}.tar.gz openmind
+          tar czf $GITHUB_WORKSPACE/dist/${{ matrix.artifact }}.tar.gz openmind
 
       - name: Prepare artifact (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Compress-Archive -Path "target/${{ matrix.target }}/release/openmind.exe" -DestinationPath "C:\temp\${{ matrix.artifact }}.zip"
+          New-Item -ItemType Directory -Force -Path dist
+          Compress-Archive -Path "target/${{ matrix.target }}/release/openmind.exe" -DestinationPath "dist/${{ matrix.artifact }}.zip"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: |
-            /tmp/${{ matrix.artifact }}.tar.gz
-            C:\temp\${{ matrix.artifact }}.zip
+          path: dist/
 
   release:
     name: Create Release
@@ -82,6 +83,9 @@ jobs:
         with:
           path: artifacts
 
+      - name: List artifacts
+        run: find artifacts -type f
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -94,11 +98,11 @@ jobs:
             - `openmind-x86_64-linux.tar.gz` - Linux x86_64
             - `openmind-aarch64-macos.tar.gz` - macOS Apple Silicon
             - `openmind-x86_64-macos.tar.gz` - macOS Intel
-            - `openmind-x86_64-windows.exe.zip` - Windows x86_64
+            - `openmind-x86_64-windows.zip` - Windows x86_64
           files: |
             artifacts/openmind-x86_64-linux/*.tar.gz
             artifacts/openmind-aarch64-macos/*.tar.gz
             artifacts/openmind-x86_64-macos/*.tar.gz
-            artifacts/openmind-x86_64-windows.exe/*.zip
+            artifacts/openmind-x86_64-windows/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
