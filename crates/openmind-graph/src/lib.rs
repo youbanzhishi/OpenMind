@@ -13,5 +13,5 @@ pub mod entity;
 pub mod traits;
 
 pub use builder::GraphBuilder;
-pub use entity::{EntityExtractor, Entity, EntityType, Relation};
-pub use traits::{GraphStore, InMemoryGraphStore, GraphSearchResult};
+pub use entity::{Entity, EntityExtractor, EntityType, Relation};
+pub use traits::{GraphSearchResult, GraphStore, InMemoryGraphStore};

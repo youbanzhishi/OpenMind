@@ -190,7 +190,9 @@ impl ActionSchema {
             if field.required {
                 match params.get(&field.name) {
                     None => return Err(format!("Required field '{}' is missing", field.name)),
-                    Some(Value::Null) => return Err(format!("Required field '{}' is null", field.name)),
+                    Some(Value::Null) => {
+                        return Err(format!("Required field '{}' is null", field.name))
+                    }
                     Some(v) => {
                         if !validate_type(v, &field.field_type) {
                             return Err(format!(
@@ -221,8 +223,12 @@ impl ActionSchema {
         for field in &self.output_fields {
             if field.required {
                 match data.get(&field.name) {
-                    None => return Err(format!("Required output field '{}' is missing", field.name)),
-                    Some(Value::Null) => return Err(format!("Required output field '{}' is null", field.name)),
+                    None => {
+                        return Err(format!("Required output field '{}' is missing", field.name))
+                    }
+                    Some(Value::Null) => {
+                        return Err(format!("Required output field '{}' is null", field.name))
+                    }
                     _ => {}
                 }
             }
@@ -319,20 +325,23 @@ mod tests {
             name: "search".to_string(),
             description: "Search knowledge".to_string(),
             input_fields: vec![
-                SchemaField::new("query", "string").required().description("Search query"),
+                SchemaField::new("query", "string")
+                    .required()
+                    .description("Search query"),
                 SchemaField::new("limit", "integer").description("Max results"),
             ],
-            output_fields: vec![
-                SchemaField::new("results", "array").required(),
-            ],
+            output_fields: vec![SchemaField::new("results", "array").required()],
             requires_auth: false,
             rate_limit: 0,
         };
 
-        let input = ActionInput::new("search", json!({
-            "query": "Rust programming",
-            "limit": 10
-        }));
+        let input = ActionInput::new(
+            "search",
+            json!({
+                "query": "Rust programming",
+                "limit": 10
+            }),
+        );
 
         assert!(schema.validate_input(&input).is_ok());
     }
@@ -342,17 +351,18 @@ mod tests {
         let schema = ActionSchema {
             name: "search".to_string(),
             description: "Search".to_string(),
-            input_fields: vec![
-                SchemaField::new("query", "string").required(),
-            ],
+            input_fields: vec![SchemaField::new("query", "string").required()],
             output_fields: vec![],
             requires_auth: false,
             rate_limit: 0,
         };
 
-        let input = ActionInput::new("search", json!({
-            "limit": 10
-        }));
+        let input = ActionInput::new(
+            "search",
+            json!({
+                "limit": 10
+            }),
+        );
 
         let result = schema.validate_input(&input);
         assert!(result.is_err());
@@ -364,17 +374,18 @@ mod tests {
         let schema = ActionSchema {
             name: "search".to_string(),
             description: "Search".to_string(),
-            input_fields: vec![
-                SchemaField::new("limit", "integer").required(),
-            ],
+            input_fields: vec![SchemaField::new("limit", "integer").required()],
             output_fields: vec![],
             requires_auth: false,
             rate_limit: 0,
         };
 
-        let input = ActionInput::new("search", json!({
-            "limit": "not_a_number"
-        }));
+        let input = ActionInput::new(
+            "search",
+            json!({
+                "limit": "not_a_number"
+            }),
+        );
 
         let result = schema.validate_input(&input);
         assert!(result.is_err());

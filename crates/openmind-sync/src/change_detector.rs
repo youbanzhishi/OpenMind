@@ -193,10 +193,8 @@ mod tests {
         hashes.insert("doc1.md".to_string(), compute_content_hash("Old content"));
 
         let detector = ChangeDetector::with_hashes(hashes);
-        let records = detector.detect_batch(&[
-            ("doc1.md", "New content"),
-            ("doc2.md", "Brand new"),
-        ]);
+        let records =
+            detector.detect_batch(&[("doc1.md", "New content"), ("doc2.md", "Brand new")]);
 
         assert_eq!(records.len(), 2);
         assert_eq!(records[0].change_type, ChangeType::Modified);

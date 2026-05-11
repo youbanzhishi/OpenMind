@@ -3,7 +3,6 @@
 //! 从知识条目中提取实体（人物/技术/概念等）和关系，
 //! 构建知识图谱的节点和边。
 
-
 use openmind_core::KnowledgeEntry;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -99,27 +98,74 @@ impl EntityExtractor {
     pub fn new() -> Self {
         Self {
             tech_keywords: vec![
-                "Rust", "Python", "Go", "JavaScript", "TypeScript", "Java", "C++",
-                "React", "Vue", "Svelte", "Next.js",
-                "Docker", "Kubernetes", "Terraform",
-                "PostgreSQL", "MySQL", "Redis", "MongoDB", "Qdrant", "SQLite",
-                "Axum", "Tokio", "Actix",
-                "Git", "GitHub", "CI/CD",
-                "REST", "GraphQL", "gRPC",
-                "OAuth", "JWT",
-                "Linux", "macOS", "Windows",
-                "AWS", "GCP", "Azure",
+                "Rust",
+                "Python",
+                "Go",
+                "JavaScript",
+                "TypeScript",
+                "Java",
+                "C++",
+                "React",
+                "Vue",
+                "Svelte",
+                "Next.js",
+                "Docker",
+                "Kubernetes",
+                "Terraform",
+                "PostgreSQL",
+                "MySQL",
+                "Redis",
+                "MongoDB",
+                "Qdrant",
+                "SQLite",
+                "Axum",
+                "Tokio",
+                "Actix",
+                "Git",
+                "GitHub",
+                "CI/CD",
+                "REST",
+                "GraphQL",
+                "gRPC",
+                "OAuth",
+                "JWT",
+                "Linux",
+                "macOS",
+                "Windows",
+                "AWS",
+                "GCP",
+                "Azure",
             ],
             concept_keywords: vec![
-                "微服务", "分布式", "云原生", "容器化", "DevOps",
-                "机器学习", "深度学习", "NLP", "RAG", "LLM", "AI",
-                "数据科学", "数据分析",
-                "安全", "性能优化", "可观测性",
-                "设计模式", "架构", "重构",
-                "测试", "持续集成", "持续部署",
-                "知识管理", "知识图谱",
-                "向量搜索", "语义搜索", "全文搜索",
-                "事件驱动", "消息队列",
+                "微服务",
+                "分布式",
+                "云原生",
+                "容器化",
+                "DevOps",
+                "机器学习",
+                "深度学习",
+                "NLP",
+                "RAG",
+                "LLM",
+                "AI",
+                "数据科学",
+                "数据分析",
+                "安全",
+                "性能优化",
+                "可观测性",
+                "设计模式",
+                "架构",
+                "重构",
+                "测试",
+                "持续集成",
+                "持续部署",
+                "知识管理",
+                "知识图谱",
+                "向量搜索",
+                "语义搜索",
+                "全文搜索",
+                "事件驱动",
+                "消息队列",
             ],
         }
     }
@@ -234,10 +280,9 @@ fn count_occurrences(text: &str, keyword: &str) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use openmind_core::{SourceType, EntryStatus, EmbeddingStatus, compute_content_hash};
-    use chrono::Utc;
     use super::*;
-    
+    use chrono::Utc;
+    use openmind_core::{compute_content_hash, EmbeddingStatus, EntryStatus, SourceType};
 
     fn make_entry(title: &str, content: &str, tags: Vec<&str>) -> KnowledgeEntry {
         KnowledgeEntry {

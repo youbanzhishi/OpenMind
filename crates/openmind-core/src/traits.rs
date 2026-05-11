@@ -2,8 +2,8 @@
 //!
 //! 所有可插拔组件的抽象接口。
 
-use async_trait::async_trait;
 use crate::models::*;
+use async_trait::async_trait;
 
 /// 数据源可插拔接口
 ///

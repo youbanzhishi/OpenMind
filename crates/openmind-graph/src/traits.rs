@@ -168,7 +168,11 @@ impl GraphStore for InMemoryGraphStore {
             .values()
             .filter(|n| {
                 n.label == label
-                    && (n.properties.to_string().to_lowercase().contains(&query.to_lowercase())
+                    && (n
+                        .properties
+                        .to_string()
+                        .to_lowercase()
+                        .contains(&query.to_lowercase())
                         || n.id.contains(query))
             })
             .take(limit)
@@ -285,26 +289,35 @@ mod tests {
     async fn test_in_memory_graph_edges() {
         let store = InMemoryGraphStore::new();
 
-        store.add_node(GraphNode {
-            id: "rust".to_string(),
-            label: "tech".to_string(),
-            properties: serde_json::json!({}),
-        }).await.unwrap();
+        store
+            .add_node(GraphNode {
+                id: "rust".to_string(),
+                label: "tech".to_string(),
+                properties: serde_json::json!({}),
+            })
+            .await
+            .unwrap();
 
-        store.add_node(GraphNode {
-            id: "safety".to_string(),
-            label: "concept".to_string(),
-            properties: serde_json::json!({}),
-        }).await.unwrap();
+        store
+            .add_node(GraphNode {
+                id: "safety".to_string(),
+                label: "concept".to_string(),
+                properties: serde_json::json!({}),
+            })
+            .await
+            .unwrap();
 
-        store.add_edge(GraphEdge {
-            id: "e1".to_string(),
-            from_id: "rust".to_string(),
-            to_id: "safety".to_string(),
-            edge_type: "focuses_on".to_string(),
-            weight: 0.9,
-            properties: serde_json::json!({}),
-        }).await.unwrap();
+        store
+            .add_edge(GraphEdge {
+                id: "e1".to_string(),
+                from_id: "rust".to_string(),
+                to_id: "safety".to_string(),
+                edge_type: "focuses_on".to_string(),
+                weight: 0.9,
+                properties: serde_json::json!({}),
+            })
+            .await
+            .unwrap();
 
         let edges = store.get_edges("rust").await.unwrap();
         assert_eq!(edges.len(), 1);
@@ -314,12 +327,53 @@ mod tests {
     async fn test_in_memory_graph_neighbors() {
         let store = InMemoryGraphStore::new();
 
-        store.add_node(GraphNode { id: "a".to_string(), label: "test".to_string(), properties: serde_json::json!({}) }).await.unwrap();
-        store.add_node(GraphNode { id: "b".to_string(), label: "test".to_string(), properties: serde_json::json!({}) }).await.unwrap();
-        store.add_node(GraphNode { id: "c".to_string(), label: "test".to_string(), properties: serde_json::json!({}) }).await.unwrap();
+        store
+            .add_node(GraphNode {
+                id: "a".to_string(),
+                label: "test".to_string(),
+                properties: serde_json::json!({}),
+            })
+            .await
+            .unwrap();
+        store
+            .add_node(GraphNode {
+                id: "b".to_string(),
+                label: "test".to_string(),
+                properties: serde_json::json!({}),
+            })
+            .await
+            .unwrap();
+        store
+            .add_node(GraphNode {
+                id: "c".to_string(),
+                label: "test".to_string(),
+                properties: serde_json::json!({}),
+            })
+            .await
+            .unwrap();
 
-        store.add_edge(GraphEdge { id: "e1".to_string(), from_id: "a".to_string(), to_id: "b".to_string(), edge_type: "related".to_string(), weight: 1.0, properties: serde_json::json!({}) }).await.unwrap();
-        store.add_edge(GraphEdge { id: "e2".to_string(), from_id: "b".to_string(), to_id: "c".to_string(), edge_type: "related".to_string(), weight: 1.0, properties: serde_json::json!({}) }).await.unwrap();
+        store
+            .add_edge(GraphEdge {
+                id: "e1".to_string(),
+                from_id: "a".to_string(),
+                to_id: "b".to_string(),
+                edge_type: "related".to_string(),
+                weight: 1.0,
+                properties: serde_json::json!({}),
+            })
+            .await
+            .unwrap();
+        store
+            .add_edge(GraphEdge {
+                id: "e2".to_string(),
+                from_id: "b".to_string(),
+                to_id: "c".to_string(),
+                edge_type: "related".to_string(),
+                weight: 1.0,
+                properties: serde_json::json!({}),
+            })
+            .await
+            .unwrap();
 
         let neighbors = store.get_neighbors("a", 1).await.unwrap();
         assert_eq!(neighbors.len(), 1);

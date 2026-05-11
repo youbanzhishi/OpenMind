@@ -3,10 +3,8 @@
 //! 从浏览器书签HTML文件或JSON导入书签到知识库。
 
 use async_trait::async_trait;
-use openmind_core::{
-    compute_content_hash, Connector, ContentChange, ContentItem,
-};
 use openmind_core::connector_registry::{ConnectorCapabilities, EnhancedConnector};
+use openmind_core::{compute_content_hash, Connector, ContentChange, ContentItem};
 use serde::{Deserialize, Serialize};
 
 /// 书签条目
@@ -143,7 +141,8 @@ impl BookmarkConnector {
             "# {}\n\nURL: {}\n{}",
             entry.title,
             entry.url,
-            entry.added_date
+            entry
+                .added_date
                 .as_ref()
                 .map(|d| format!("Added: {}", d))
                 .unwrap_or_default()
@@ -177,18 +176,26 @@ impl Connector for BookmarkConnector {
     async fn connect(&self) -> anyhow::Result<()> {
         let path = std::path::Path::new(&self.config.bookmarks_path);
         if !path.exists() {
-            tracing::warn!("Bookmarks path does not exist: {} (will return empty)", self.config.bookmarks_path);
+            tracing::warn!(
+                "Bookmarks path does not exist: {} (will return empty)",
+                self.config.bookmarks_path
+            );
         }
         Ok(())
     }
 
-    async fn list_changes(&self, _since: &openmind_core::SyncState) -> anyhow::Result<Vec<ContentChange>> {
+    async fn list_changes(
+        &self,
+        _since: &openmind_core::SyncState,
+    ) -> anyhow::Result<Vec<ContentChange>> {
         let path = std::path::Path::new(&self.config.bookmarks_path);
         if !path.exists() {
             return Ok(vec![]);
         }
         // All bookmarks treated as "added" since we don't track individual changes
-        Ok(vec![ContentChange::Added(self.config.bookmarks_path.clone())])
+        Ok(vec![ContentChange::Added(
+            self.config.bookmarks_path.clone(),
+        )])
     }
 
     async fn fetch_content(&self, _id: &str) -> anyhow::Result<ContentItem> {
@@ -226,19 +233,15 @@ impl Connector for BookmarkConnector {
 #[async_trait]
 impl EnhancedConnector for BookmarkConnector {
     fn capabilities(&self) -> ConnectorCapabilities {
-        ConnectorCapabilities::new(
-            vec!["html", "json"],
-            "poll",
-            "full",
-        )
-        .with_capability(openmind_core::Capability::new(
-            "netscape_html_parsing",
-            "Parse Netscape bookmark HTML format",
-        ))
-        .with_capability(openmind_core::Capability::new(
-            "json_import",
-            "Import bookmarks from JSON",
-        ))
+        ConnectorCapabilities::new(vec!["html", "json"], "poll", "full")
+            .with_capability(openmind_core::Capability::new(
+                "netscape_html_parsing",
+                "Parse Netscape bookmark HTML format",
+            ))
+            .with_capability(openmind_core::Capability::new(
+                "json_import",
+                "Import bookmarks from JSON",
+            ))
     }
 }
 

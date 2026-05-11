@@ -8,8 +8,8 @@
 
 use openmind_api::{create_router, AppState};
 use openmind_core::{
-    ContentItem, DummyEmbeddingModel, IngestionPipeline, KnowledgeStore,
-    SearchFilters, SqliteKnowledgeStore,
+    ContentItem, DummyEmbeddingModel, IngestionPipeline, KnowledgeStore, SearchFilters,
+    SqliteKnowledgeStore,
 };
 use openmind_ingest::DefaultIngestionPipeline;
 use std::path::Path;
@@ -93,7 +93,10 @@ async fn cmd_ingest(path: &str) -> anyhow::Result<()> {
             let p = entry.path();
             if p.is_file() {
                 let ext = p.extension().and_then(|e| e.to_str()).unwrap_or("");
-                if matches!(ext, "md" | "txt" | "html" | "htm" | "rs" | "py" | "js" | "ts") {
+                if matches!(
+                    ext,
+                    "md" | "txt" | "html" | "htm" | "rs" | "py" | "js" | "ts"
+                ) {
                     match ingest_file(&pipeline, &p).await {
                         Ok(ids) => {
                             count += ids.len();
@@ -126,7 +129,12 @@ async fn ingest_file(
         source,
         content_type,
         content,
-        title: Some(path.file_name().unwrap_or_default().to_string_lossy().to_string()),
+        title: Some(
+            path.file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string(),
+        ),
         metadata: serde_json::json!({}),
         file_references: vec![],
         tags: vec![],
@@ -140,7 +148,11 @@ fn infer_content_type(source: &str) -> String {
         "markdown".to_string()
     } else if source.ends_with(".html") || source.ends_with(".htm") {
         "html".to_string()
-    } else if source.ends_with(".rs") || source.ends_with(".py") || source.ends_with(".js") || source.ends_with(".ts") {
+    } else if source.ends_with(".rs")
+        || source.ends_with(".py")
+        || source.ends_with(".js")
+        || source.ends_with(".ts")
+    {
         "code".to_string()
     } else {
         "text".to_string()

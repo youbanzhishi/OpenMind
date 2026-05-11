@@ -107,7 +107,11 @@ impl IncrementalSync {
     }
 
     /// 注册Connector的变更检测器
-    pub fn register_detector(&mut self, connector_name: &str, existing_hashes: HashMap<String, String>) {
+    pub fn register_detector(
+        &mut self,
+        connector_name: &str,
+        existing_hashes: HashMap<String, String>,
+    ) {
         self.change_detector.insert(
             connector_name.to_string(),
             ChangeDetector::with_hashes(existing_hashes),
@@ -191,7 +195,9 @@ impl IncrementalSync {
                 result.added += 1;
             } else {
                 result.errors += 1;
-                result.error_details.push(format!("Failed to fetch added item: {}", id));
+                result
+                    .error_details
+                    .push(format!("Failed to fetch added item: {}", id));
             }
         }
 
@@ -203,7 +209,9 @@ impl IncrementalSync {
                 result.updated += 1;
             } else {
                 result.errors += 1;
-                result.error_details.push(format!("Failed to fetch updated item: {}", id));
+                result
+                    .error_details
+                    .push(format!("Failed to fetch updated item: {}", id));
             }
         }
 
@@ -219,12 +227,17 @@ impl IncrementalSync {
             connector_name: connector_name.to_string(),
             last_sync_at: now,
             content_hash: None,
-            status: if result.errors == 0 { "success".to_string() } else { "partial".to_string() },
+            status: if result.errors == 0 {
+                "success".to_string()
+            } else {
+                "partial".to_string()
+            },
             last_error: result.error_details.first().cloned(),
             total_synced: (result.added + result.updated + result.deleted) as i64,
             total_errors: result.errors as i64,
         };
-        self.sync_states.insert(connector_name.to_string(), sync_state);
+        self.sync_states
+            .insert(connector_name.to_string(), sync_state);
 
         result
     }
@@ -327,12 +340,7 @@ mod tests {
         let mut sync = IncrementalSync::new(ConflictStrategy::LastWriteWins);
 
         let plan = SyncPlan::new("vault");
-        let result = sync.execute(
-            "vault",
-            &plan,
-            |_id| None,
-            |_id| {},
-        );
+        let result = sync.execute("vault", &plan, |_id| None, |_id| {});
         assert!(result.is_success());
     }
 
@@ -340,12 +348,10 @@ mod tests {
     fn test_cascade_delete() {
         let deleted = IncrementalSync::cascade_delete(
             "entry1",
-            |id| {
-                match id {
-                    "entry1" => vec!["entry2".to_string()],
-                    "entry2" => vec!["entry3".to_string()],
-                    _ => vec![],
-                }
+            |id| match id {
+                "entry1" => vec!["entry2".to_string()],
+                "entry2" => vec!["entry3".to_string()],
+                _ => vec![],
             },
             |_id| {},
         );

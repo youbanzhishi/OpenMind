@@ -166,9 +166,21 @@ fn cosine_similarity(a: &[f32], b: &[f32]) -> f64 {
     if a.len() != b.len() || a.is_empty() {
         return 0.0;
     }
-    let dot: f64 = a.iter().zip(b.iter()).map(|(x, y)| (*x as f64) * (*y as f64)).sum();
-    let norm_a: f64 = a.iter().map(|x| (*x as f64) * (*x as f64)).sum::<f64>().sqrt();
-    let norm_b: f64 = b.iter().map(|x| (*x as f64) * (*x as f64)).sum::<f64>().sqrt();
+    let dot: f64 = a
+        .iter()
+        .zip(b.iter())
+        .map(|(x, y)| (*x as f64) * (*y as f64))
+        .sum();
+    let norm_a: f64 = a
+        .iter()
+        .map(|x| (*x as f64) * (*x as f64))
+        .sum::<f64>()
+        .sqrt();
+    let norm_b: f64 = b
+        .iter()
+        .map(|x| (*x as f64) * (*x as f64))
+        .sum::<f64>()
+        .sqrt();
     if norm_a == 0.0 || norm_b == 0.0 {
         return 0.0;
     }
@@ -234,7 +246,11 @@ impl VectorStore for InMemoryVectorStore {
             })
             .collect();
 
-        results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        results.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         results.truncate(limit);
         Ok(results)
     }
@@ -300,10 +316,16 @@ mod tests {
         store.upsert_batch(points).await.unwrap();
 
         // Search for similar to [1,0,0,0]
-        let results = store.search(vec![1.0, 0.0, 0.0, 0.0], 10, 0.5).await.unwrap();
+        let results = store
+            .search(vec![1.0, 0.0, 0.0, 0.0], 10, 0.5)
+            .await
+            .unwrap();
         assert!(results.len() >= 2, "Should find at least 2 similar vectors");
         assert_eq!(results[0].id, "doc-1", "Most similar should be doc-1");
-        assert!(results[0].score > 0.99, "doc-1 should have near-perfect score");
+        assert!(
+            results[0].score > 0.99,
+            "doc-1 should have near-perfect score"
+        );
     }
 
     #[tokio::test]

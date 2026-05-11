@@ -2,9 +2,9 @@
 //!
 //! 基于向量相似度的语义搜索，通过VectorStore进行向量检索。
 
-use openmind_core::{SearchFilters,
-    EmbeddingModel, KnowledgeStore, SearchMode,
-    SearchRequest, SearchResponse, SearchResult, VectorStore,
+use openmind_core::{
+    EmbeddingModel, KnowledgeStore, SearchFilters, SearchMode, SearchRequest, SearchResponse,
+    SearchResult, VectorStore,
 };
 
 /// 语义搜索引擎
@@ -50,16 +50,15 @@ where
     }
 
     /// 执行语义搜索
-    pub async fn search(
-        &self,
-        query: &str,
-        limit: usize,
-    ) -> anyhow::Result<Vec<SearchResult>> {
+    pub async fn search(&self, query: &str, limit: usize) -> anyhow::Result<Vec<SearchResult>> {
         // 1. 向量化查询
         let query_vector = self.embedding.embed_text(query).await?;
 
         // 2. 向量相似度搜索
-        let vector_results = self.vector_store.search(query_vector, limit, self.threshold).await?;
+        let vector_results = self
+            .vector_store
+            .search(query_vector, limit, self.threshold)
+            .await?;
 
         // 3. 获取完整的知识条目
         let mut results = Vec::with_capacity(vector_results.len());
@@ -79,10 +78,7 @@ where
     }
 
     /// 执行搜索并返回SearchResponse
-    pub async fn search_response(
-        &self,
-        request: SearchRequest,
-    ) -> anyhow::Result<SearchResponse> {
+    pub async fn search_response(&self, request: SearchRequest) -> anyhow::Result<SearchResponse> {
         let limit = request.limit.unwrap_or(10);
         let results = self.search(&request.query, limit).await?;
         let total = results.len();
@@ -98,15 +94,20 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use openmind_core::{SearchFilters,
-        DummyEmbeddingModel, InMemoryVectorStore, KnowledgeEntry, SqliteKnowledgeStore,
-        compute_content_hash, EmbeddingStatus, EntryStatus, SourceType, VectorPoint,
-    };
     use chrono::Utc;
+    use openmind_core::{
+        compute_content_hash, DummyEmbeddingModel, EmbeddingStatus, EntryStatus,
+        InMemoryVectorStore, KnowledgeEntry, SearchFilters, SourceType, SqliteKnowledgeStore,
+        VectorPoint,
+    };
     use std::collections::HashMap;
     use uuid::Uuid;
 
-    async fn setup_semantic_search() -> (DummyEmbeddingModel, InMemoryVectorStore, SqliteKnowledgeStore) {
+    async fn setup_semantic_search() -> (
+        DummyEmbeddingModel,
+        InMemoryVectorStore,
+        SqliteKnowledgeStore,
+    ) {
         let embedding = DummyEmbeddingModel::new(64);
         let vector_store = InMemoryVectorStore::new(64);
         let store = SqliteKnowledgeStore::open_in_memory().unwrap();
@@ -114,8 +115,14 @@ mod tests {
         // Insert test data
         let now = Utc::now();
         let entries = vec![
-            ("Rust Programming", "Rust is a systems programming language."),
-            ("Python Data Science", "Python is widely used for data science."),
+            (
+                "Rust Programming",
+                "Rust is a systems programming language.",
+            ),
+            (
+                "Python Data Science",
+                "Python is widely used for data science.",
+            ),
         ];
 
         for (title, content) in entries {
@@ -141,11 +148,14 @@ mod tests {
 
             // Insert vector
             let vec = embedding.embed_text(content).await.unwrap();
-            vector_store.upsert(VectorPoint {
-                id: id.clone(),
-                vector: vec,
-                metadata: HashMap::from([("entry_id".to_string(), id)]),
-            }).await.unwrap();
+            vector_store
+                .upsert(VectorPoint {
+                    id: id.clone(),
+                    vector: vec,
+                    metadata: HashMap::from([("entry_id".to_string(), id)]),
+                })
+                .await
+                .unwrap();
         }
 
         (embedding, vector_store, store)

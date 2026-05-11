@@ -9,12 +9,12 @@
 //! 所有Connector通过EnhancedConnector trait实现能力声明，
 //! 注册到ConnectorRegistry即可被系统自动发现和编排。
 
-pub mod vault;
 pub mod blog;
 pub mod bookmark;
 pub mod note;
+pub mod vault;
 
-pub use vault::VaultConnector;
 pub use blog::BlogConnector;
 pub use bookmark::BookmarkConnector;
 pub use note::NoteConnector;
+pub use vault::VaultConnector;

@@ -16,7 +16,12 @@ pub trait ContentParser: Send + Sync {
     fn can_parse(&self, content_type: &str) -> bool;
 
     /// 解析原始内容为ContentItem
-    async fn parse(&self, source: &str, content: &str, content_type: &str) -> anyhow::Result<ContentItem>;
+    async fn parse(
+        &self,
+        source: &str,
+        content: &str,
+        content_type: &str,
+    ) -> anyhow::Result<ContentItem>;
 }
 
 /// 解析器注册表
@@ -39,7 +44,12 @@ impl ParserRegistry {
         self.parsers.push(parser);
     }
 
-    pub async fn parse(&self, source: &str, content: &str, content_type: &str) -> anyhow::Result<ContentItem> {
+    pub async fn parse(
+        &self,
+        source: &str,
+        content: &str,
+        content_type: &str,
+    ) -> anyhow::Result<ContentItem> {
         for parser in &self.parsers {
             if parser.can_parse(content_type) {
                 return parser.parse(source, content, content_type).await;
@@ -62,11 +72,19 @@ pub struct MarkdownParser;
 #[async_trait]
 impl ContentParser for MarkdownParser {
     fn can_parse(&self, content_type: &str) -> bool {
-        matches!(content_type, "markdown" | "text/markdown" | "text/x-markdown")
+        matches!(
+            content_type,
+            "markdown" | "text/markdown" | "text/x-markdown"
+        )
     }
 
-    async fn parse(&self, source: &str, content: &str, _content_type: &str) -> anyhow::Result<ContentItem> {
-        use pulldown_cmark::{Parser, Event, Tag, TagEnd};
+    async fn parse(
+        &self,
+        source: &str,
+        content: &str,
+        _content_type: &str,
+    ) -> anyhow::Result<ContentItem> {
+        use pulldown_cmark::{Event, Parser, Tag, TagEnd};
 
         let parser = Parser::new(content);
         let mut title = String::new();
@@ -155,7 +173,12 @@ impl ContentParser for PlainTextParser {
         matches!(content_type, "text" | "text/plain" | "plain")
     }
 
-    async fn parse(&self, source: &str, content: &str, _content_type: &str) -> anyhow::Result<ContentItem> {
+    async fn parse(
+        &self,
+        source: &str,
+        content: &str,
+        _content_type: &str,
+    ) -> anyhow::Result<ContentItem> {
         let title = source.rsplit('/').next().unwrap_or(source).to_string();
         Ok(ContentItem {
             source: source.to_string(),
@@ -178,7 +201,12 @@ impl ContentParser for HtmlParser {
         matches!(content_type, "html" | "text/html")
     }
 
-    async fn parse(&self, source: &str, content: &str, _content_type: &str) -> anyhow::Result<ContentItem> {
+    async fn parse(
+        &self,
+        source: &str,
+        content: &str,
+        _content_type: &str,
+    ) -> anyhow::Result<ContentItem> {
         use scraper::Html;
 
         let document = Html::parse_document(content);
@@ -197,7 +225,18 @@ impl ContentParser for HtmlParser {
         let body_selector = scraper::Selector::parse("body").unwrap();
         if let Some(body) = document.select(&body_selector).next() {
             // Select headings and paragraphs
-            for selector_name in &["h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "blockquote", "pre"] {
+            for selector_name in &[
+                "h1",
+                "h2",
+                "h3",
+                "h4",
+                "h5",
+                "h6",
+                "p",
+                "li",
+                "blockquote",
+                "pre",
+            ] {
                 if let Ok(sel) = scraper::Selector::parse(selector_name) {
                     for el in body.select(&sel) {
                         let text = el.inner_html();
@@ -276,7 +315,10 @@ This is the second section with some **bold** text.
         let parser = PlainTextParser;
         assert!(parser.can_parse("text"));
 
-        let item = parser.parse("notes.txt", "Hello world", "text").await.unwrap();
+        let item = parser
+            .parse("notes.txt", "Hello world", "text")
+            .await
+            .unwrap();
         assert_eq!(item.content, "Hello world");
     }
 
@@ -294,10 +336,16 @@ This is the second section with some **bold** text.
     #[tokio::test]
     async fn test_parser_registry() {
         let registry = ParserRegistry::new();
-        let item = registry.parse("test.md", "# Hello\n\nWorld", "markdown").await.unwrap();
+        let item = registry
+            .parse("test.md", "# Hello\n\nWorld", "markdown")
+            .await
+            .unwrap();
         assert_eq!(item.title.as_deref(), Some("Hello"));
 
-        let item = registry.parse("test.txt", "Plain text", "text").await.unwrap();
+        let item = registry
+            .parse("test.txt", "Plain text", "text")
+            .await
+            .unwrap();
         assert_eq!(item.content, "Plain text");
     }
 }

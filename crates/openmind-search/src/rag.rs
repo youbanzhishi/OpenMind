@@ -4,8 +4,8 @@
 //! 支持多种检索策略和重排算法。
 
 use openmind_core::{
-    EmbeddingModel, KnowledgeStore, KnowledgeEntry, SearchResult,
-    SearchFilters, SearchMode, VectorStore,
+    EmbeddingModel, KnowledgeEntry, KnowledgeStore, SearchFilters, SearchMode, SearchResult,
+    VectorStore,
 };
 use serde::{Deserialize, Serialize};
 
@@ -150,15 +150,16 @@ where
         match request.search_mode {
             SearchMode::Keyword => {
                 let filters = SearchFilters::default();
-                self.store.query_keyword(&request.query, limit, &filters).await
+                self.store
+                    .query_keyword(&request.query, limit, &filters)
+                    .await
             }
             SearchMode::Semantic => {
                 let query_vector = self.embedding.embed_text(&request.query).await?;
-                let vector_results = self.vector_store.search(
-                    query_vector,
-                    limit,
-                    request.similarity_threshold,
-                ).await?;
+                let vector_results = self
+                    .vector_store
+                    .search(query_vector, limit, request.similarity_threshold)
+                    .await?;
 
                 let mut results = Vec::with_capacity(vector_results.len());
                 for vr in vector_results {
@@ -179,12 +180,19 @@ where
 
                 // Keyword results
                 let filters = SearchFilters::default();
-                let keyword_results = self.store.query_keyword(&request.query, limit, &filters).await?;
+                let keyword_results = self
+                    .store
+                    .query_keyword(&request.query, limit, &filters)
+                    .await?;
 
                 // Semantic results
                 let semantic_results = match self.embedding.embed_text(&request.query).await {
                     Ok(query_vector) => {
-                        match self.vector_store.search(query_vector, limit, request.similarity_threshold).await {
+                        match self
+                            .vector_store
+                            .search(query_vector, limit, request.similarity_threshold)
+                            .await
+                        {
                             Ok(vector_results) => {
                                 let mut results = Vec::with_capacity(vector_results.len());
                                 for vr in vector_results {
@@ -210,7 +218,8 @@ where
                 let mut merged: Vec<SearchResult> = Vec::new();
                 for kr in keyword_results {
                     if let Some(existing) = merged.iter_mut().find(|r| r.entry.id == kr.entry.id) {
-                        existing.relevance = existing.relevance * self.semantic_weight + kr.relevance * keyword_weight;
+                        existing.relevance = existing.relevance * self.semantic_weight
+                            + kr.relevance * keyword_weight;
                     } else {
                         let mut r = kr.clone();
                         r.relevance = r.relevance * keyword_weight;
@@ -219,7 +228,8 @@ where
                 }
                 for sr in semantic_results {
                     if let Some(existing) = merged.iter_mut().find(|r| r.entry.id == sr.entry.id) {
-                        existing.relevance = existing.relevance * self.semantic_weight + sr.relevance * keyword_weight;
+                        existing.relevance = existing.relevance * self.semantic_weight
+                            + sr.relevance * keyword_weight;
                     } else {
                         let mut r = sr.clone();
                         r.relevance = r.relevance * self.semantic_weight;
@@ -236,14 +246,20 @@ where
     fn rerank(&self, mut results: Vec<SearchResult>, request: &RagRequest) -> Vec<SearchResult> {
         match self.rerank_strategy {
             RerankStrategy::ScoreOnly => {
-                results.sort_by(|a, b| b.relevance.partial_cmp(&a.relevance).unwrap_or(std::cmp::Ordering::Equal));
+                results.sort_by(|a, b| {
+                    b.relevance
+                        .partial_cmp(&a.relevance)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                });
             }
             RerankStrategy::FreshnessWeighted => {
                 // Combine score with freshness (newer = higher)
                 results.sort_by(|a, b| {
                     let score_a = a.relevance * 0.8 + freshness_score(&a.entry.updated_at) * 0.2;
                     let score_b = b.relevance * 0.8 + freshness_score(&b.entry.updated_at) * 0.2;
-                    score_b.partial_cmp(&score_a).unwrap_or(std::cmp::Ordering::Equal)
+                    score_b
+                        .partial_cmp(&score_a)
+                        .unwrap_or(std::cmp::Ordering::Equal)
                 });
             }
             RerankStrategy::MultiFactor => {
@@ -254,7 +270,9 @@ where
                     let score_b = b.relevance * 0.6
                         + freshness_score(&b.entry.updated_at) * 0.2
                         + authority_score(&b.entry) * 0.2;
-                    score_b.partial_cmp(&score_a).unwrap_or(std::cmp::Ordering::Equal)
+                    score_b
+                        .partial_cmp(&score_a)
+                        .unwrap_or(std::cmp::Ordering::Equal)
                 });
             }
         }
@@ -304,7 +322,7 @@ fn freshness_score(updated_at: &chrono::DateTime<chrono::Utc>) -> f64 {
 /// 计算权威度分数（0.0-1.0）
 fn authority_score(entry: &KnowledgeEntry) -> f64 {
     let mut score = 0.5; // Base score
-    // More tags = more curated = more authoritative
+                         // More tags = more curated = more authoritative
     score += (entry.tags.len() as f64 * 0.05).min(0.2);
     // Has project = more organized
     if entry.project.is_some() {
@@ -328,24 +346,40 @@ fn build_snippet(content: &str, max_len: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use openmind_core::{
-        DummyEmbeddingModel, InMemoryVectorStore, SqliteKnowledgeStore,
-        compute_content_hash, EmbeddingStatus, EntryStatus, SourceType, VectorPoint,
-    };
     use chrono::Utc;
+    use openmind_core::{
+        compute_content_hash, DummyEmbeddingModel, EmbeddingStatus, EntryStatus,
+        InMemoryVectorStore, SourceType, SqliteKnowledgeStore, VectorPoint,
+    };
     use std::collections::HashMap;
     use uuid::Uuid;
 
-    async fn setup_rag_pipeline() -> (DummyEmbeddingModel, InMemoryVectorStore, SqliteKnowledgeStore) {
+    async fn setup_rag_pipeline() -> (
+        DummyEmbeddingModel,
+        InMemoryVectorStore,
+        SqliteKnowledgeStore,
+    ) {
         let embedding = DummyEmbeddingModel::new(64);
         let vector_store = InMemoryVectorStore::new(64);
         let store = SqliteKnowledgeStore::open_in_memory().unwrap();
 
         let now = Utc::now();
         let entries = vec![
-            ("Rust Programming Guide", "Rust is a systems programming language focused on safety and performance.", vec!["rust", "programming"]),
-            ("Python Data Science", "Python is widely used for data science and machine learning applications.", vec!["python", "data-science"]),
-            ("Rust vs Go", "Comparing Rust and Go for backend systems development.", vec!["rust", "go", "comparison"]),
+            (
+                "Rust Programming Guide",
+                "Rust is a systems programming language focused on safety and performance.",
+                vec!["rust", "programming"],
+            ),
+            (
+                "Python Data Science",
+                "Python is widely used for data science and machine learning applications.",
+                vec!["python", "data-science"],
+            ),
+            (
+                "Rust vs Go",
+                "Comparing Rust and Go for backend systems development.",
+                vec!["rust", "go", "comparison"],
+            ),
         ];
 
         for (title, content, tags) in entries {
@@ -370,11 +404,14 @@ mod tests {
             store.store(entry).await.unwrap();
 
             let vec = embedding.embed_text(content).await.unwrap();
-            vector_store.upsert(VectorPoint {
-                id: id.clone(),
-                vector: vec,
-                metadata: HashMap::from([("entry_id".to_string(), id)]),
-            }).await.unwrap();
+            vector_store
+                .upsert(VectorPoint {
+                    id: id.clone(),
+                    vector: vec,
+                    metadata: HashMap::from([("entry_id".to_string(), id)]),
+                })
+                .await
+                .unwrap();
         }
 
         (embedding, vector_store, store)
@@ -416,7 +453,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_rag_rerank_strategies() {
-        for strategy in [RerankStrategy::ScoreOnly, RerankStrategy::FreshnessWeighted, RerankStrategy::MultiFactor] {
+        for strategy in [
+            RerankStrategy::ScoreOnly,
+            RerankStrategy::FreshnessWeighted,
+            RerankStrategy::MultiFactor,
+        ] {
             let (e, v, s) = setup_rag_pipeline().await;
             let pipeline = RagPipeline::new(e, v, s).with_rerank_strategy(strategy);
 
@@ -429,7 +470,11 @@ mod tests {
             };
 
             let response = pipeline.query(request).await.unwrap();
-            assert!(!response.contexts.is_empty(), "Strategy {:?} should find contexts", strategy);
+            assert!(
+                !response.contexts.is_empty(),
+                "Strategy {:?} should find contexts",
+                strategy
+            );
         }
     }
 

@@ -71,7 +71,10 @@ impl SyncMonitor {
         metrics.successful_syncs += 1;
         metrics.total_items_synced += items;
 
-        let cm = metrics.by_connector.entry(connector.to_string()).or_default();
+        let cm = metrics
+            .by_connector
+            .entry(connector.to_string())
+            .or_default();
         cm.sync_count += 1;
         cm.success_count += 1;
         cm.items_synced += items;
@@ -87,7 +90,10 @@ impl SyncMonitor {
         metrics.total_syncs += 1;
         metrics.failed_syncs += 1;
 
-        let cm = metrics.by_connector.entry(connector.to_string()).or_default();
+        let cm = metrics
+            .by_connector
+            .entry(connector.to_string())
+            .or_default();
         cm.sync_count += 1;
         cm.fail_count += 1;
         cm.last_error = Some(error.to_string());
@@ -98,7 +104,10 @@ impl SyncMonitor {
         let mut metrics = self.metrics.lock().unwrap();
         metrics.total_conflicts += 1;
 
-        let cm = metrics.by_connector.entry(connector.to_string()).or_default();
+        let cm = metrics
+            .by_connector
+            .entry(connector.to_string())
+            .or_default();
         cm.conflicts += 1;
     }
 

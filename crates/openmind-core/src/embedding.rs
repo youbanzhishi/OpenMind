@@ -4,9 +4,9 @@
 //! - OpenAIEmbeddingModel: 调用OpenAI text-embedding-3-small API
 //! - DummyEmbeddingModel: 测试用，返回随机向量
 
+use crate::traits::EmbeddingModel;
 use async_trait::async_trait;
 use serde::Deserialize;
-use crate::traits::EmbeddingModel;
 
 /// OpenAI嵌入模型
 ///
@@ -56,7 +56,8 @@ impl EmbeddingModel for OpenAIEmbeddingModel {
     }
 
     async fn embed_text(&self, text: &str) -> anyhow::Result<Vec<f32>> {
-        let response = self.client
+        let response = self
+            .client
             .post("https://api.openai.com/v1/embeddings")
             .header("Authorization", format!("Bearer {}", self.api_key))
             .json(&serde_json::json!({

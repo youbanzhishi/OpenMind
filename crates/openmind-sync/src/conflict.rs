@@ -110,20 +110,20 @@ impl ConflictResolver {
                     ConflictResult::UseLocal(conflict.entry_id)
                 }
             }
-            ConflictStrategy::Manual => {
-                ConflictResult::NeedsManualResolution(conflict)
-            }
+            ConflictStrategy::Manual => ConflictResult::NeedsManualResolution(conflict),
             ConflictStrategy::Merge => {
                 // Simple merge: prefer longer content, or use remote if same length
                 // In real implementation, would do proper 3-way merge
                 ConflictResult::Merged(conflict.entry_id)
             }
             ConflictStrategy::SourcePriority => {
-                let local_priority = self.source_priorities
+                let local_priority = self
+                    .source_priorities
                     .get(&conflict.source)
                     .copied()
                     .unwrap_or(u32::MAX);
-                let remote_priority = self.source_priorities
+                let remote_priority = self
+                    .source_priorities
                     .get(&conflict.source)
                     .copied()
                     .unwrap_or(u32::MAX);
@@ -150,8 +150,16 @@ mod tests {
 
     fn make_conflict(local_newer: bool) -> Conflict {
         let now = Utc::now();
-        let local_time = if local_newer { now } else { now - chrono::Duration::seconds(60) };
-        let remote_time = if local_newer { now - chrono::Duration::seconds(60) } else { now };
+        let local_time = if local_newer {
+            now
+        } else {
+            now - chrono::Duration::seconds(60)
+        };
+        let remote_time = if local_newer {
+            now - chrono::Duration::seconds(60)
+        } else {
+            now
+        };
 
         Conflict {
             id: "c1".to_string(),
@@ -225,8 +233,14 @@ mod tests {
 
     #[test]
     fn test_strategy_from_str() {
-        assert_eq!(ConflictStrategy::from_str("last_write_wins"), Some(ConflictStrategy::LastWriteWins));
-        assert_eq!(ConflictStrategy::from_str("manual"), Some(ConflictStrategy::Manual));
+        assert_eq!(
+            ConflictStrategy::from_str("last_write_wins"),
+            Some(ConflictStrategy::LastWriteWins)
+        );
+        assert_eq!(
+            ConflictStrategy::from_str("manual"),
+            Some(ConflictStrategy::Manual)
+        );
         assert_eq!(ConflictStrategy::from_str("unknown"), None);
     }
 }

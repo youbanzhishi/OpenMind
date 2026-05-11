@@ -4,12 +4,11 @@
 //! 降级路径：模型不可用时跳过嵌入，只做关键词索引
 
 use async_trait::async_trait;
-use openmind_core::{
-    compute_content_hash, ContentItem, EmbeddingModel, EmbeddingStatus,
-    EntryStatus, IngestionPipeline, KnowledgeEntry, KnowledgeStore,
-    SourceType,
-};
 use chrono::Utc;
+use openmind_core::{
+    compute_content_hash, ContentItem, EmbeddingModel, EmbeddingStatus, EntryStatus,
+    IngestionPipeline, KnowledgeEntry, KnowledgeStore, SourceType,
+};
 use uuid::Uuid;
 
 use crate::chunker::{Chunker, ChunkingStrategy};
@@ -106,23 +105,24 @@ where
         // 1. Parse if needed (the item may already be parsed)
         let parsed_item = if item.content.is_empty() {
             // Try to parse from raw content
-            self.parser.parse(&item.source, &item.content, &content_type).await?
+            self.parser
+                .parse(&item.source, &item.content, &content_type)
+                .await?
         } else {
             item
         };
 
         // 2. Chunk
         let parent_id = Uuid::new_v4().to_string();
-        let chunks = self.chunker.chunk(&parsed_item.content, &content_type, &parent_id);
+        let chunks = self
+            .chunker
+            .chunk(&parsed_item.content, &content_type, &parent_id);
 
         if chunks.is_empty() {
             // No chunks, create a single entry from the full content
-            let entry = self.create_entry(
-                &parent_id,
-                &parsed_item,
-                &content_type,
-                now,
-            ).await?;
+            let entry = self
+                .create_entry(&parent_id, &parsed_item, &content_type, now)
+                .await?;
             let id = self.store.store(entry).await?;
             ids.push(id);
             return Ok(ids);
@@ -143,7 +143,8 @@ where
                     Err(e) => {
                         tracing::warn!(
                             "Embedding failed for chunk {}, marking as Pending: {}",
-                            chunk.id, e
+                            chunk.id,
+                            e
                         );
                         (None, EmbeddingStatus::Pending)
                     }
@@ -236,7 +237,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use openmind_core::{IngestionPipeline, DummyEmbeddingModel, SqliteKnowledgeStore};
+    use openmind_core::{DummyEmbeddingModel, IngestionPipeline, SqliteKnowledgeStore};
 
     #[tokio::test]
     async fn test_pipeline_ingest() {
@@ -262,11 +263,15 @@ mod tests {
     async fn test_pipeline_with_degradation() {
         // Use a failing embedding model for testing degradation
         struct FailingEmbeddingModel;
-        
+
         #[async_trait]
         impl EmbeddingModel for FailingEmbeddingModel {
-            fn model_name(&self) -> &str { "failing" }
-            fn dimension(&self) -> usize { 64 }
+            fn model_name(&self) -> &str {
+                "failing"
+            }
+            fn dimension(&self) -> usize {
+                64
+            }
             async fn embed_text(&self, _text: &str) -> anyhow::Result<Vec<f32>> {
                 anyhow::bail!("Model unavailable for testing")
             }

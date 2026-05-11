@@ -5,11 +5,8 @@
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use openmind_core::{
-    Connector, ContentChange, ContentItem,
-    compute_content_hash,
-};
 use openmind_core::connector_registry::{ConnectorCapabilities, EnhancedConnector};
+use openmind_core::{compute_content_hash, Connector, ContentChange, ContentItem};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -32,7 +29,11 @@ impl Default for VaultConfig {
             root_path: String::new(),
             extensions: vec!["md".to_string(), "txt".to_string(), "markdown".to_string()],
             recursive: true,
-            exclude_dirs: vec![".git".to_string(), ".obsidian".to_string(), "node_modules".to_string()],
+            exclude_dirs: vec![
+                ".git".to_string(),
+                ".obsidian".to_string(),
+                "node_modules".to_string(),
+            ],
         }
     }
 }
@@ -104,7 +105,10 @@ impl VaultConnector {
                 if self.config.recursive && !self.is_excluded(&path) {
                     self.scan_dir(&path, files)?;
                 }
-            } else if path.is_file() && self.is_matching_extension(&path) && !self.is_excluded(&path) {
+            } else if path.is_file()
+                && self.is_matching_extension(&path)
+                && !self.is_excluded(&path)
+            {
                 files.push(path);
             }
         }
@@ -115,12 +119,14 @@ impl VaultConnector {
     fn read_file(&self, path: &Path) -> anyhow::Result<ContentItem> {
         let content = std::fs::read_to_string(path)?;
         let source = path.to_string_lossy().to_string();
-        let title = path.file_stem()
+        let title = path
+            .file_stem()
             .and_then(|s| s.to_str())
             .unwrap_or("untitled")
             .to_string();
 
-        let content_type = path.extension()
+        let content_type = path
+            .extension()
             .and_then(|ext| ext.to_str())
             .map(|ext| match ext {
                 "md" | "markdown" => "markdown",
@@ -162,7 +168,10 @@ impl Connector for VaultConnector {
         Ok(())
     }
 
-    async fn list_changes(&self, since: &openmind_core::SyncState) -> anyhow::Result<Vec<ContentChange>> {
+    async fn list_changes(
+        &self,
+        since: &openmind_core::SyncState,
+    ) -> anyhow::Result<Vec<ContentChange>> {
         let files = self.scan_files()?;
         let mut changes = Vec::new();
 
@@ -197,19 +206,15 @@ impl Connector for VaultConnector {
 #[async_trait]
 impl EnhancedConnector for VaultConnector {
     fn capabilities(&self) -> ConnectorCapabilities {
-        ConnectorCapabilities::new(
-            vec!["markdown", "text", "html"],
-            "poll",
-            "incremental",
-        )
-        .with_capability(openmind_core::Capability::new(
-            "recursive_scan",
-            "Recursively scan directories for files",
-        ))
-        .with_capability(openmind_core::Capability::new(
-            "incremental_sync",
-            "Only sync files modified since last sync",
-        ))
+        ConnectorCapabilities::new(vec!["markdown", "text", "html"], "poll", "incremental")
+            .with_capability(openmind_core::Capability::new(
+                "recursive_scan",
+                "Recursively scan directories for files",
+            ))
+            .with_capability(openmind_core::Capability::new(
+                "incremental_sync",
+                "Only sync files modified since last sync",
+            ))
     }
 }
 
@@ -225,7 +230,11 @@ mod tests {
         // Create test files
         fs::write(root.join("test1.md"), "# Test 1\n\nContent 1").unwrap();
         fs::write(root.join("test2.txt"), "Plain text content").unwrap();
-        fs::write(root.join("test3.html"), "<html><body>HTML content</body></html>").unwrap();
+        fs::write(
+            root.join("test3.html"),
+            "<html><body>HTML content</body></html>",
+        )
+        .unwrap();
 
         // Create subdirectory with file
         fs::create_dir(root.join("notes")).unwrap();
@@ -247,7 +256,10 @@ mod tests {
         assert!(files.len() >= 3, "Should find at least 3 matching files");
 
         // .git/ignore.md should be excluded
-        let git_files: Vec<_> = files.iter().filter(|f| f.to_string_lossy().contains(".git")).collect();
+        let git_files: Vec<_> = files
+            .iter()
+            .filter(|f| f.to_string_lossy().contains(".git"))
+            .collect();
         assert!(git_files.is_empty(), "Files in .git should be excluded");
     }
 

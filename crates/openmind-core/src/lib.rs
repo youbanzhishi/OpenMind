@@ -10,27 +10,25 @@
 //! - `EventBus`: 事件总线，组件间松耦合通信
 //! - `UnifiedRegistry`: 统一注册表，组件发现与编排
 
-pub mod models;
-pub mod traits;
-pub mod sqlite_store;
-pub mod embedding;
-pub mod vector_store;
-pub mod event_bus;
-pub mod registry;
 pub mod connector_registry;
+pub mod embedding;
+pub mod event_bus;
+pub mod models;
+pub mod registry;
+pub mod sqlite_store;
+pub mod traits;
+pub mod vector_store;
 
+pub use embedding::{DummyEmbeddingModel, OpenAIEmbeddingModel};
+pub use event_bus::{Event, EventBus};
 pub use models::*;
+pub use registry::{Capability, ComponentDescriptor, ComponentType, UnifiedRegistry};
+pub use sqlite_store::{compute_content_hash, SqliteKnowledgeStore};
 pub use traits::*;
-pub use sqlite_store::{SqliteKnowledgeStore, compute_content_hash};
-pub use embedding::{OpenAIEmbeddingModel, DummyEmbeddingModel};
 pub use vector_store::{
-    VectorStore, VectorPoint, VectorSearchResult, VectorStoreRegistry, InMemoryVectorStore,
-};
-pub use event_bus::{EventBus, Event};
-pub use registry::{
-    UnifiedRegistry, ComponentDescriptor, ComponentType, Capability,
+    InMemoryVectorStore, VectorPoint, VectorSearchResult, VectorStore, VectorStoreRegistry,
 };
 
 pub use connector_registry::{
-    ConnectorRegistry, ConnectorCapabilities, ConnectorHealth, EnhancedConnector,
+    ConnectorCapabilities, ConnectorHealth, ConnectorRegistry, EnhancedConnector,
 };

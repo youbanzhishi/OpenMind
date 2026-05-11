@@ -158,7 +158,13 @@ impl SyncScheduler {
         let cc = config.connectors.get(connector_name);
 
         let interval = cc
-            .map(|c| if c.interval_secs == 0 { config.scheduler.default_interval_secs } else { c.interval_secs })
+            .map(|c| {
+                if c.interval_secs == 0 {
+                    config.scheduler.default_interval_secs
+                } else {
+                    c.interval_secs
+                }
+            })
             .unwrap_or(config.scheduler.default_interval_secs);
 
         let last_sync = self.last_sync.lock().unwrap();
@@ -195,7 +201,10 @@ impl SyncScheduler {
     /// 获取活跃任务数
     pub fn active_task_count(&self) -> usize {
         let tasks = self.tasks.lock().unwrap();
-        tasks.iter().filter(|t| t.status == SyncTaskStatus::Running).count()
+        tasks
+            .iter()
+            .filter(|t| t.status == SyncTaskStatus::Running)
+            .count()
     }
 
     /// 启动调度器

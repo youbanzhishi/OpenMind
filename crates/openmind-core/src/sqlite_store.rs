@@ -14,7 +14,6 @@ use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection};
 use sha2::{Digest, Sha256};
 
-
 use crate::models::*;
 use crate::traits::KnowledgeStore;
 
@@ -170,10 +169,8 @@ impl KnowledgeStore for SqliteKnowledgeStore {
         let embedding_status_str = entry.embedding_status.as_str();
 
         // Delete from FTS first (for INSERT OR REPLACE case)
-        conn.execute(
-            "DELETE FROM knowledge_fts WHERE id = ?1",
-            params![entry.id],
-        ).ok(); // Ignore error if not exists
+        conn.execute("DELETE FROM knowledge_fts WHERE id = ?1", params![entry.id])
+            .ok(); // Ignore error if not exists
 
         conn.execute(
             "INSERT OR REPLACE INTO knowledge_entries
@@ -291,7 +288,6 @@ impl KnowledgeStore for SqliteKnowledgeStore {
         Ok(results)
     }
 
-
     async fn relate(&self, relation: KnowledgeRelation) -> anyhow::Result<()> {
         let conn = self.conn.lock().unwrap();
         let metadata_json = serde_json::to_string(&relation.metadata)?;
@@ -328,7 +324,7 @@ impl KnowledgeStore for SqliteKnowledgeStore {
             for id in &current_ids {
                 let mut stmt = conn.prepare(
                     "SELECT id, from_id, to_id, relation_type, weight, metadata, created_at
-                     FROM knowledge_relations WHERE from_id = ?1 OR to_id = ?1"
+                     FROM knowledge_relations WHERE from_id = ?1 OR to_id = ?1",
                 )?;
                 let rows = stmt.query_map(params![id], |row| {
                     let metadata_str: String = row.get(5)?;
@@ -339,7 +335,8 @@ impl KnowledgeStore for SqliteKnowledgeStore {
                         to_id: row.get(2)?,
                         relation_type: row.get(3)?,
                         weight: row.get(4)?,
-                        metadata: serde_json::from_str(&metadata_str).unwrap_or(serde_json::Value::Null),
+                        metadata: serde_json::from_str(&metadata_str)
+                            .unwrap_or(serde_json::Value::Null),
                         created_at: DateTime::parse_from_rfc3339(&created_at_str)
                             .map(|dt| dt.with_timezone(&Utc))
                             .unwrap_or_else(|_| Utc::now()),
@@ -373,7 +370,7 @@ impl KnowledgeStore for SqliteKnowledgeStore {
             "SELECT id, source_type, source_id, title, content, content_hash,
                     embedding_id, embedding_status, tags, project, metadata,
                     file_references, status, created_at, updated_at
-             FROM knowledge_entries WHERE id = ?1"
+             FROM knowledge_entries WHERE id = ?1",
         )?;
         let mut rows = stmt.query(params![id])?;
         if let Some(row) = rows.next()? {
@@ -386,7 +383,8 @@ impl KnowledgeStore for SqliteKnowledgeStore {
     async fn delete(&self, id: &str) -> anyhow::Result<()> {
         let conn = self.conn.lock().unwrap();
         // Delete from FTS
-        conn.execute("DELETE FROM knowledge_fts WHERE id = ?1", params![id]).ok();
+        conn.execute("DELETE FROM knowledge_fts WHERE id = ?1", params![id])
+            .ok();
         // Delete from main table
         conn.execute("DELETE FROM knowledge_entries WHERE id = ?1", params![id])?;
         Ok(())
@@ -394,22 +392,19 @@ impl KnowledgeStore for SqliteKnowledgeStore {
 
     async fn stats(&self) -> anyhow::Result<KnowledgeStats> {
         let conn = self.conn.lock().unwrap();
-        let total_entries: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM knowledge_entries",
-            [],
-            |row| row.get(0),
-        )?;
+        let total_entries: i64 =
+            conn.query_row("SELECT COUNT(*) FROM knowledge_entries", [], |row| {
+                row.get(0)
+            })?;
 
-        let total_relations: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM knowledge_relations",
-            [],
-            |row| row.get(0),
-        )?;
+        let total_relations: i64 =
+            conn.query_row("SELECT COUNT(*) FROM knowledge_relations", [], |row| {
+                row.get(0)
+            })?;
 
         // Count by source_type
-        let mut stmt = conn.prepare(
-            "SELECT source_type, COUNT(*) FROM knowledge_entries GROUP BY source_type"
-        )?;
+        let mut stmt = conn
+            .prepare("SELECT source_type, COUNT(*) FROM knowledge_entries GROUP BY source_type")?;
         let mut by_source = serde_json::Map::new();
         let rows = stmt.query_map([], |row| {
             let st: String = row.get(0)?;
@@ -424,7 +419,7 @@ impl KnowledgeStore for SqliteKnowledgeStore {
 
         // Count by embedding_status
         let mut stmt = conn.prepare(
-            "SELECT embedding_status, COUNT(*) FROM knowledge_entries GROUP BY embedding_status"
+            "SELECT embedding_status, COUNT(*) FROM knowledge_entries GROUP BY embedding_status",
         )?;
         let mut by_embedding = serde_json::Map::new();
         let rows = stmt.query_map([], |row| {
@@ -439,11 +434,13 @@ impl KnowledgeStore for SqliteKnowledgeStore {
         }
 
         // Count unique tags
-        let total_tags: i64 = conn.query_row(
-            "SELECT COUNT(DISTINCT json_each.value) FROM knowledge_entries, json_each(tags)",
-            [],
-            |row| row.get(0),
-        ).unwrap_or(0);
+        let total_tags: i64 = conn
+            .query_row(
+                "SELECT COUNT(DISTINCT json_each.value) FROM knowledge_entries, json_each(tags)",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
 
         Ok(KnowledgeStats {
             total_entries,
@@ -454,7 +451,6 @@ impl KnowledgeStore for SqliteKnowledgeStore {
         })
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -571,9 +567,18 @@ mod tests {
 
         // Insert entries
         let entries = vec![
-            ("Rust Guide", "Rust is a systems programming language focused on safety."),
-            ("Python Tips", "Python is great for data science and machine learning."),
-            ("Rust vs Go", "Comparing Rust and Go for backend development."),
+            (
+                "Rust Guide",
+                "Rust is a systems programming language focused on safety.",
+            ),
+            (
+                "Python Tips",
+                "Python is great for data science and machine learning.",
+            ),
+            (
+                "Rust vs Go",
+                "Comparing Rust and Go for backend development.",
+            ),
         ];
 
         for (i, (title, content)) in entries.iter().enumerate() {
@@ -600,7 +605,10 @@ mod tests {
         // Search for "Rust"
         let filters = SearchFilters::default();
         let results = store.query_keyword("Rust", 10, &filters).await.unwrap();
-        assert!(results.len() >= 2, "Should find at least 2 results for 'Rust'");
+        assert!(
+            results.len() >= 2,
+            "Should find at least 2 results for 'Rust'"
+        );
     }
 
     #[test]

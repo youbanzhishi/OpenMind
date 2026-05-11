@@ -100,7 +100,7 @@ impl Chunker {
 
     /// Markdown分块：按heading分块
     fn chunk_markdown(&self, content: &str, parent_id: &str) -> Vec<TextChunk> {
-        use pulldown_cmark::{Parser, Event, Tag, TagEnd};
+        use pulldown_cmark::{Event, Parser, Tag, TagEnd};
 
         let mut chunks = Vec::new();
         let mut current_heading = String::new();
@@ -341,7 +341,10 @@ impl Chunker {
             }
 
             // Track Python-style indentation
-            if trimmed.starts_with("def ") || trimmed.starts_with("class ") || trimmed.starts_with("async def ") {
+            if trimmed.starts_with("def ")
+                || trimmed.starts_with("class ")
+                || trimmed.starts_with("async def ")
+            {
                 if !current_block.is_empty() && brace_count == 0 {
                     // Python: flush previous
                     let block_content = current_block.join("\n");

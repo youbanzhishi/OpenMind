@@ -33,13 +33,27 @@ pub struct SyncConfig {
     pub delete_mode: String,
 }
 
-fn default_conflict_strategy() -> String { "last_write_wins".to_string() }
-fn default_true_val() -> bool { true }
-fn default_hash_algorithm() -> String { "sha256".to_string() }
-fn default_batch_size() -> usize { 100 }
-fn default_delete_mode() -> String { "cascade".to_string() }
-fn default_true() -> bool { true }
-fn default_incremental() -> String { "incremental".to_string() }
+fn default_conflict_strategy() -> String {
+    "last_write_wins".to_string()
+}
+fn default_true_val() -> bool {
+    true
+}
+fn default_hash_algorithm() -> String {
+    "sha256".to_string()
+}
+fn default_batch_size() -> usize {
+    100
+}
+fn default_delete_mode() -> String {
+    "cascade".to_string()
+}
+fn default_true() -> bool {
+    true
+}
+fn default_incremental() -> String {
+    "incremental".to_string()
+}
 
 impl Default for SyncConfig {
     fn default() -> Self {
@@ -75,10 +89,18 @@ pub struct SchedulerConfig {
     pub retry_interval_secs: u64,
 }
 
-fn default_interval() -> u64 { 300 }
-fn default_max_concurrent() -> usize { 3 }
-fn default_retry_count() -> u32 { 3 }
-fn default_retry_interval() -> u64 { 30 }
+fn default_interval() -> u64 {
+    300
+}
+fn default_max_concurrent() -> usize {
+    3
+}
+fn default_retry_count() -> u32 {
+    3
+}
+fn default_retry_interval() -> u64 {
+    30
+}
 
 impl Default for SchedulerConfig {
     fn default() -> Self {

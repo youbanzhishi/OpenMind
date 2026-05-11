@@ -104,7 +104,8 @@ impl UnifiedRegistry {
     /// 注册组件
     pub fn register(&mut self, descriptor: ComponentDescriptor) {
         if descriptor.is_default {
-            self.defaults.insert(descriptor.component_type, descriptor.name.clone());
+            self.defaults
+                .insert(descriptor.component_type, descriptor.name.clone());
         }
         self.components.insert(descriptor.name.clone(), descriptor);
     }
@@ -168,7 +169,9 @@ mod tests {
 
         registry.register(desc);
         assert!(registry.get("qdrant").is_some());
-        assert!(registry.default_for_type(ComponentType::VectorStore).is_some());
+        assert!(registry
+            .default_for_type(ComponentType::VectorStore)
+            .is_some());
     }
 
     #[test]

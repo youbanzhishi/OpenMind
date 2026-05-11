@@ -3,10 +3,8 @@
 //! 从博客源（RSS/本地Markdown目录）摄入文章到知识库。
 
 use async_trait::async_trait;
-use openmind_core::{
-    compute_content_hash, Connector, ContentChange, ContentItem,
-};
 use openmind_core::connector_registry::{ConnectorCapabilities, EnhancedConnector};
+use openmind_core::{compute_content_hash, Connector, ContentChange, ContentItem};
 use serde::{Deserialize, Serialize};
 
 /// 博客Connector配置
@@ -116,9 +114,15 @@ impl Connector for BlogConnector {
         Ok(())
     }
 
-    async fn list_changes(&self, _since: &openmind_core::SyncState) -> anyhow::Result<Vec<ContentChange>> {
+    async fn list_changes(
+        &self,
+        _since: &openmind_core::SyncState,
+    ) -> anyhow::Result<Vec<ContentChange>> {
         let files = self.scan_posts()?;
-        Ok(files.into_iter().map(|f| ContentChange::Added(f.to_string_lossy().to_string())).collect())
+        Ok(files
+            .into_iter()
+            .map(|f| ContentChange::Added(f.to_string_lossy().to_string()))
+            .collect())
     }
 
     async fn fetch_content(&self, id: &str) -> anyhow::Result<ContentItem> {
@@ -179,15 +183,12 @@ impl Connector for BlogConnector {
 #[async_trait]
 impl EnhancedConnector for BlogConnector {
     fn capabilities(&self) -> ConnectorCapabilities {
-        ConnectorCapabilities::new(
-            vec!["markdown"],
-            "poll",
-            "incremental",
+        ConnectorCapabilities::new(vec!["markdown"], "poll", "incremental").with_capability(
+            openmind_core::Capability::new(
+                "frontmatter_parsing",
+                "Parse YAML frontmatter from Markdown files",
+            ),
         )
-        .with_capability(openmind_core::Capability::new(
-            "frontmatter_parsing",
-            "Parse YAML frontmatter from Markdown files",
-        ))
     }
 }
 
@@ -219,10 +220,17 @@ mod tests {
     async fn test_blog_fetch_content_with_frontmatter() {
         let dir = tempfile::tempdir().unwrap();
         let post_path = dir.path().join("my-post.md");
-        std::fs::write(&post_path, "---\ntitle: Test Post\ntags: rust, test\n---\n\n# Test Post\n\nThis is content.").unwrap();
+        std::fs::write(
+            &post_path,
+            "---\ntitle: Test Post\ntags: rust, test\n---\n\n# Test Post\n\nThis is content.",
+        )
+        .unwrap();
 
         let connector = BlogConnector::with_path(dir.path().to_string_lossy().to_string());
-        let item = connector.fetch_content(&post_path.to_string_lossy()).await.unwrap();
+        let item = connector
+            .fetch_content(&post_path.to_string_lossy())
+            .await
+            .unwrap();
 
         assert_eq!(item.title, Some("Test Post".to_string()));
         assert!(item.tags.contains(&"rust".to_string()));

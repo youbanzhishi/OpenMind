@@ -1,5 +1,6 @@
 //! 应用状态
 
+use crate::api_metrics::ApiMetricsTracker;
 use openmind_actions::ActionRegistry;
 use openmind_core::SqliteKnowledgeStore;
 use openmind_sync::{SyncConfigManager, SyncMonitor, SyncScheduler};
@@ -25,6 +26,8 @@ pub struct AppState {
     pub sync_monitor: Option<Arc<SyncMonitor>>,
     /// 同步配置管理 (Phase 6)
     pub sync_config: Option<Arc<SyncConfigManager>>,
+    /// API指标追踪 (Phase 6)
+    pub api_metrics: Arc<ApiMetricsTracker>,
 }
 
 impl AppState {
@@ -38,6 +41,7 @@ impl AppState {
             sync_scheduler: None,
             sync_monitor: None,
             sync_config: None,
+            api_metrics: Arc::new(ApiMetricsTracker::new()),
         }
     }
 

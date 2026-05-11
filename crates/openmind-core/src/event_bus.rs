@@ -113,6 +113,9 @@ mod tests {
     #[test]
     fn test_event_names() {
         assert_eq!(Event::EntryCreated("x".to_string()).name(), "entry.created");
-        assert_eq!(Event::SyncCompleted("vault".to_string()).name(), "sync.completed");
+        assert_eq!(
+            Event::SyncCompleted("vault".to_string()).name(),
+            "sync.completed"
+        );
     }
 }

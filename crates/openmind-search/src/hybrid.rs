@@ -4,8 +4,7 @@
 //! 当语义搜索不可用时，自动降级为纯关键词搜索。
 
 use openmind_core::{
-    EmbeddingModel, KnowledgeStore, SearchMode,
-    SearchRequest, SearchResponse, SearchResult,
+    EmbeddingModel, KnowledgeStore, SearchMode, SearchRequest, SearchResponse, SearchResult,
 };
 
 /// 混合搜索引擎
@@ -42,7 +41,10 @@ where
 
         match request.mode {
             SearchMode::Keyword => {
-                let results = self.store.query_keyword(&request.query, limit, &filters).await?;
+                let results = self
+                    .store
+                    .query_keyword(&request.query, limit, &filters)
+                    .await?;
                 let total = results.len();
                 Ok(SearchResponse {
                     results,
@@ -54,7 +56,10 @@ where
             SearchMode::Semantic => {
                 match self.embedding.embed_text(&request.query).await {
                     Ok(embedding) => {
-                        let results = self.store.query_semantic(&request.query, &embedding, limit).await?;
+                        let results = self
+                            .store
+                            .query_semantic(&request.query, &embedding, limit)
+                            .await?;
                         let total = results.len();
                         Ok(SearchResponse {
                             results,
@@ -66,7 +71,10 @@ where
                     Err(e) => {
                         tracing::warn!("Semantic search degraded, falling back to keyword: {}", e);
                         // 降级：回退到关键词搜索
-                        let results = self.store.query_keyword(&request.query, limit, &filters).await?;
+                        let results = self
+                            .store
+                            .query_keyword(&request.query, limit, &filters)
+                            .await?;
                         let total = results.len();
                         Ok(SearchResponse {
                             results,
@@ -78,11 +86,16 @@ where
                 }
             }
             SearchMode::Hybrid => {
-                let keyword_results = self.store.query_keyword(&request.query, limit * 2, &filters).await?;
+                let keyword_results = self
+                    .store
+                    .query_keyword(&request.query, limit * 2, &filters)
+                    .await?;
 
                 let semantic_results = match self.embedding.embed_text(&request.query).await {
                     Ok(embedding) => {
-                        self.store.query_semantic(&request.query, &embedding, limit * 2).await?
+                        self.store
+                            .query_semantic(&request.query, &embedding, limit * 2)
+                            .await?
                     }
                     Err(e) => {
                         tracing::warn!("Semantic search unavailable in hybrid mode: {}", e);
@@ -98,7 +111,8 @@ where
 
                 for kr in keyword_results {
                     if let Some(existing) = merged.iter_mut().find(|r| r.entry.id == kr.entry.id) {
-                        existing.relevance = existing.relevance * self.semantic_weight + kr.relevance * keyword_weight;
+                        existing.relevance = existing.relevance * self.semantic_weight
+                            + kr.relevance * keyword_weight;
                     } else {
                         let mut r = kr.clone();
                         r.relevance = r.relevance * keyword_weight;
@@ -108,7 +122,8 @@ where
 
                 for sr in semantic_results {
                     if let Some(existing) = merged.iter_mut().find(|r| r.entry.id == sr.entry.id) {
-                        existing.relevance = existing.relevance * self.semantic_weight + sr.relevance * keyword_weight;
+                        existing.relevance = existing.relevance * self.semantic_weight
+                            + sr.relevance * keyword_weight;
                     } else {
                         let mut r = sr.clone();
                         r.relevance = r.relevance * self.semantic_weight;
@@ -116,13 +131,21 @@ where
                     }
                 }
 
-                merged.sort_by(|a, b| b.relevance.partial_cmp(&a.relevance).unwrap_or(std::cmp::Ordering::Equal));
+                merged.sort_by(|a, b| {
+                    b.relevance
+                        .partial_cmp(&a.relevance)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                });
                 merged.truncate(limit);
 
                 let total = merged.len();
                 Ok(SearchResponse {
                     results: merged,
-                    mode: if is_degraded { SearchMode::Keyword } else { SearchMode::Hybrid },
+                    mode: if is_degraded {
+                        SearchMode::Keyword
+                    } else {
+                        SearchMode::Hybrid
+                    },
                     total,
                     degraded: is_degraded,
                 })
@@ -131,13 +154,14 @@ where
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use openmind_core::{DummyEmbeddingModel, SqliteKnowledgeStore, compute_content_hash,
-                        EmbeddingStatus, EntryStatus, SourceType, SearchFilters};
     use chrono::Utc;
+    use openmind_core::{
+        compute_content_hash, DummyEmbeddingModel, EmbeddingStatus, EntryStatus, SearchFilters,
+        SourceType, SqliteKnowledgeStore,
+    };
     use uuid::Uuid;
 
     async fn setup_test_data() -> (DummyEmbeddingModel, SqliteKnowledgeStore) {
@@ -147,9 +171,18 @@ mod tests {
 
         // Insert test entries
         let entries = vec![
-            ("Rust Programming Guide", "Rust is a systems programming language focused on safety and performance."),
-            ("Python Data Science", "Python is widely used for data science and machine learning."),
-            ("Rust vs Go Comparison", "Comparing Rust and Go for backend systems development."),
+            (
+                "Rust Programming Guide",
+                "Rust is a systems programming language focused on safety and performance.",
+            ),
+            (
+                "Python Data Science",
+                "Python is widely used for data science and machine learning.",
+            ),
+            (
+                "Rust vs Go Comparison",
+                "Comparing Rust and Go for backend systems development.",
+            ),
         ];
 
         for (title, content) in entries {
@@ -198,11 +231,15 @@ mod tests {
     async fn test_semantic_degradation() {
         // Test with a failing embedding model
         struct FailingEmbedding;
-        
+
         #[async_trait::async_trait]
         impl openmind_core::EmbeddingModel for FailingEmbedding {
-            fn model_name(&self) -> &str { "failing" }
-            fn dimension(&self) -> usize { 64 }
+            fn model_name(&self) -> &str {
+                "failing"
+            }
+            fn dimension(&self) -> usize {
+                64
+            }
             async fn embed_text(&self, _text: &str) -> anyhow::Result<Vec<f32>> {
                 anyhow::bail!("Model unavailable")
             }

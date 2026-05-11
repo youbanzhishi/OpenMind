@@ -9,12 +9,12 @@
 //! - `hybrid`: 混合搜索引擎（关键词+语义融合）
 //! - `rag`: RAG查询管道（检索→重排→生成）
 
-pub mod keyword;
-pub mod semantic;
 pub mod hybrid;
+pub mod keyword;
 pub mod rag;
+pub mod semantic;
 
-pub use keyword::KeywordSearchEngine;
-pub use semantic::SemanticSearchEngine;
 pub use hybrid::HybridSearchEngine;
-pub use rag::{RagPipeline, RagRequest, RagResponse, RagContext, RerankStrategy};
+pub use keyword::KeywordSearchEngine;
+pub use rag::{RagContext, RagPipeline, RagRequest, RagResponse, RerankStrategy};
+pub use semantic::SemanticSearchEngine;

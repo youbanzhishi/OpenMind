@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-use crate::traits::Connector;
 use crate::registry::Capability;
+use crate::traits::Connector;
 
 /// Connector能力声明
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,11 +26,7 @@ pub struct ConnectorCapabilities {
 
 impl ConnectorCapabilities {
     /// 创建新的能力声明
-    pub fn new(
-        supported_formats: Vec<&str>,
-        poll_strategy: &str,
-        sync_mode: &str,
-    ) -> Self {
+    pub fn new(supported_formats: Vec<&str>, poll_strategy: &str, sync_mode: &str) -> Self {
         Self {
             supported_formats: supported_formats.into_iter().map(String::from).collect(),
             poll_strategy: poll_strategy.to_string(),
@@ -102,7 +98,10 @@ impl ConnectorRegistry {
     }
 
     /// 获取Connector
-    pub fn get(&self, _name: &str) -> Option<std::sync::MutexGuard<'_, HashMap<String, Box<dyn EnhancedConnector>>>> {
+    pub fn get(
+        &self,
+        _name: &str,
+    ) -> Option<std::sync::MutexGuard<'_, HashMap<String, Box<dyn EnhancedConnector>>>> {
         // Can't return the guard with a reference, need different approach
         None
     }
@@ -136,7 +135,11 @@ impl ConnectorRegistry {
         let connectors = self.connectors.lock().unwrap();
         connectors
             .values()
-            .filter(|c| c.capabilities().supported_formats.contains(&format.to_string()))
+            .filter(|c| {
+                c.capabilities()
+                    .supported_formats
+                    .contains(&format.to_string())
+            })
             .map(|c| c.name().to_string())
             .collect()
     }
@@ -180,9 +183,15 @@ mod tests {
 
     #[async_trait]
     impl Connector for DummyConnector {
-        fn name(&self) -> &str { "dummy" }
-        async fn connect(&self) -> anyhow::Result<()> { Ok(()) }
-        async fn list_changes(&self, _since: &SyncState) -> anyhow::Result<Vec<ContentChange>> { Ok(vec![]) }
+        fn name(&self) -> &str {
+            "dummy"
+        }
+        async fn connect(&self) -> anyhow::Result<()> {
+            Ok(())
+        }
+        async fn list_changes(&self, _since: &SyncState) -> anyhow::Result<Vec<ContentChange>> {
+            Ok(vec![])
+        }
         async fn fetch_content(&self, _id: &str) -> anyhow::Result<ContentItem> {
             anyhow::bail!("Not implemented")
         }
@@ -202,10 +211,12 @@ mod tests {
 
         assert_eq!(registry.list_names(), vec!["dummy"]);
 
-        let result = registry.with_connector("dummy", |c| {
-            c.capabilities().supported_formats.clone()
-        });
-        assert_eq!(result, Some(vec!["text".to_string(), "markdown".to_string()]));
+        let result =
+            registry.with_connector("dummy", |c| c.capabilities().supported_formats.clone());
+        assert_eq!(
+            result,
+            Some(vec!["text".to_string(), "markdown".to_string()])
+        );
     }
 
     #[test]

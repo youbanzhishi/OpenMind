@@ -93,7 +93,10 @@ impl ActionRegistry {
 
         match action_box {
             Some(action) => {
-                let result = self.middleware_chain.execute(action.as_ref(), input, context).await;
+                let result = self
+                    .middleware_chain
+                    .execute(action.as_ref(), input, context)
+                    .await;
 
                 // Put the action back
                 {
@@ -145,22 +148,24 @@ mod tests {
 
     #[async_trait]
     impl Action for TestAction {
-        fn name(&self) -> &str { "test_action" }
+        fn name(&self) -> &str {
+            "test_action"
+        }
         fn schema(&self) -> &ActionSchema {
-            static SCHEMA: once_cell::sync::Lazy<ActionSchema> = once_cell::sync::Lazy::new(|| {
-                ActionSchema {
+            static SCHEMA: once_cell::sync::Lazy<ActionSchema> =
+                once_cell::sync::Lazy::new(|| ActionSchema {
                     name: "test_action".to_string(),
                     description: "A test action".to_string(),
                     input_fields: vec![SchemaField::new("input", "string").required()],
                     output_fields: vec![SchemaField::new("output", "string").required()],
                     requires_auth: false,
                     rate_limit: 0,
-                }
-            });
+                });
             &SCHEMA
         }
         async fn execute(&self, input: ActionInput, _context: ActionContext) -> ActionOutput {
-            let val = input.get_param("input")
+            let val = input
+                .get_param("input")
                 .and_then(|v| v.as_str())
                 .unwrap_or("default");
             ActionOutput::ok(json!({"output": val}))
@@ -199,7 +204,10 @@ mod tests {
         let input = ActionInput::new("test_action", json!({})); // Missing required "input"
         let ctx = ActionContext::new();
         let result = registry.execute("test_action", input, ctx).await;
-        assert_eq!(result.output.status, crate::protocol::ActionStatus::ValidationError);
+        assert_eq!(
+            result.output.status,
+            crate::protocol::ActionStatus::ValidationError
+        );
     }
 
     #[test]

@@ -3,7 +3,9 @@
 //! 认证/限流/日志中间件，以链式方式组合。
 //! 每个中间件可以在Action执行前后进行拦截处理。
 
-use crate::protocol::{Action, ActionContext, ActionInput, ActionOutput, ActionResult, ActionStatus};
+use crate::protocol::{
+    Action, ActionContext, ActionInput, ActionOutput, ActionResult, ActionStatus,
+};
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -52,7 +54,9 @@ impl ActionMiddleware for AuthMiddleware {
 
     async fn before(&self, _input: &ActionInput, context: &ActionContext) -> Option<ActionOutput> {
         // Check if the action requires auth by looking at the context
-        let requires_auth = context.metadata.get("requires_auth")
+        let requires_auth = context
+            .metadata
+            .get("requires_auth")
             .map(|v| v == "true")
             .unwrap_or(false);
 
@@ -105,10 +109,13 @@ impl ActionMiddleware for RateLimitMiddleware {
         let now_minute = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
-            .as_secs() / 60;
+            .as_secs()
+            / 60;
 
         let mut counters = self.counters.lock().unwrap();
-        let entry = counters.entry(context.caller.clone()).or_insert((now_minute, 0));
+        let entry = counters
+            .entry(context.caller.clone())
+            .or_insert((now_minute, 0));
 
         if entry.0 != now_minute {
             // New minute, reset counter
@@ -203,10 +210,7 @@ impl MiddlewareChain {
         for mw in &self.middlewares {
             trace.push(mw.name().to_string());
             if let Some(output) = mw.before(&input, &context).await {
-                tracing::warn!(
-                    middleware = mw.name(),
-                    "Middleware intercepted request"
-                );
+                tracing::warn!(middleware = mw.name(), "Middleware intercepted request");
                 return ActionResult {
                     output,
                     middleware_trace: trace,
@@ -248,22 +252,24 @@ mod tests {
 
     #[async_trait]
     impl Action for EchoAction {
-        fn name(&self) -> &str { "echo" }
+        fn name(&self) -> &str {
+            "echo"
+        }
         fn schema(&self) -> &ActionSchema {
-            static SCHEMA: once_cell::sync::Lazy<ActionSchema> = once_cell::sync::Lazy::new(|| {
-                ActionSchema {
+            static SCHEMA: once_cell::sync::Lazy<ActionSchema> =
+                once_cell::sync::Lazy::new(|| ActionSchema {
                     name: "echo".to_string(),
                     description: "Echo back the input".to_string(),
                     input_fields: vec![SchemaField::new("message", "string").required()],
                     output_fields: vec![SchemaField::new("echo", "string").required()],
                     requires_auth: false,
                     rate_limit: 0,
-                }
-            });
+                });
             &SCHEMA
         }
         async fn execute(&self, input: ActionInput, _context: ActionContext) -> ActionOutput {
-            let msg = input.get_param("message")
+            let msg = input
+                .get_param("message")
                 .and_then(|v| v.as_str())
                 .unwrap_or("no message");
             ActionOutput::ok(json!({"echo": msg}))
@@ -296,7 +302,8 @@ mod tests {
         let mw = AuthMiddleware::with_default();
         let input = ActionInput::new("test", json!({}));
         let mut ctx = ActionContext::new();
-        ctx.metadata.insert("requires_auth".to_string(), "true".to_string());
+        ctx.metadata
+            .insert("requires_auth".to_string(), "true".to_string());
         let result = mw.before(&input, &ctx).await;
         assert!(result.is_some());
         let output = result.unwrap();
@@ -307,10 +314,10 @@ mod tests {
     async fn test_auth_middleware_auth_required_valid_token() {
         let mw = AuthMiddleware::with_default();
         let input = ActionInput::new("test", json!({}));
-        let ctx = ActionContext::new()
-            .with_auth_token("openmind-default-key");
+        let ctx = ActionContext::new().with_auth_token("openmind-default-key");
         let mut ctx2 = ctx;
-        ctx2.metadata.insert("requires_auth".to_string(), "true".to_string());
+        ctx2.metadata
+            .insert("requires_auth".to_string(), "true".to_string());
         let result = mw.before(&input, &ctx2).await;
         assert!(result.is_none());
     }
@@ -333,8 +340,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_middleware_chain_execution() {
-        let chain = MiddlewareChain::new()
-            .add(Box::new(LoggingMiddleware));
+        let chain = MiddlewareChain::new().add(Box::new(LoggingMiddleware));
 
         // Use a simple direct test - we can't use EchoAction with once_cell easily
         // so let's just verify the chain structure

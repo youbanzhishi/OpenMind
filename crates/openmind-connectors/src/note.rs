@@ -3,10 +3,8 @@
 //! 从纯文本/Markdown备忘录目录同步笔记到知识库。
 
 use async_trait::async_trait;
-use openmind_core::{
-    compute_content_hash, Connector, ContentChange, ContentItem,
-};
 use openmind_core::connector_registry::{ConnectorCapabilities, EnhancedConnector};
+use openmind_core::{compute_content_hash, Connector, ContentChange, ContentItem};
 use serde::{Deserialize, Serialize};
 
 /// 备忘录Connector配置
@@ -115,7 +113,10 @@ impl Connector for NoteConnector {
         Ok(())
     }
 
-    async fn list_changes(&self, since: &openmind_core::SyncState) -> anyhow::Result<Vec<ContentChange>> {
+    async fn list_changes(
+        &self,
+        since: &openmind_core::SyncState,
+    ) -> anyhow::Result<Vec<ContentChange>> {
         let files = self.scan_notes()?;
         let mut changes = Vec::new();
 
@@ -156,7 +157,8 @@ impl Connector for NoteConnector {
         }
 
         // Determine content type
-        let content_type = path.extension()
+        let content_type = path
+            .extension()
             .and_then(|e| e.to_str())
             .map(|ext| match ext {
                 "md" | "markdown" => "markdown",
@@ -183,19 +185,15 @@ impl Connector for NoteConnector {
 #[async_trait]
 impl EnhancedConnector for NoteConnector {
     fn capabilities(&self) -> ConnectorCapabilities {
-        ConnectorCapabilities::new(
-            vec!["markdown", "text"],
-            "poll",
-            "incremental",
-        )
-        .with_capability(openmind_core::Capability::new(
-            "hashtag_extraction",
-            "Extract #tags from note content",
-        ))
-        .with_capability(openmind_core::Capability::new(
-            "incremental_sync",
-            "Only sync notes modified since last sync",
-        ))
+        ConnectorCapabilities::new(vec!["markdown", "text"], "poll", "incremental")
+            .with_capability(openmind_core::Capability::new(
+                "hashtag_extraction",
+                "Extract #tags from note content",
+            ))
+            .with_capability(openmind_core::Capability::new(
+                "incremental_sync",
+                "Only sync notes modified since last sync",
+            ))
     }
 }
 
@@ -241,7 +239,10 @@ mod tests {
         std::fs::write(&note_path, "# My Note\n\nSome content #rust #test").unwrap();
 
         let connector = NoteConnector::with_path(dir.path().to_string_lossy().to_string());
-        let item = connector.fetch_content(&note_path.to_string_lossy()).await.unwrap();
+        let item = connector
+            .fetch_content(&note_path.to_string_lossy())
+            .await
+            .unwrap();
 
         assert_eq!(item.title, Some("test note".to_string()));
         assert!(item.tags.contains(&"note".to_string())); // default

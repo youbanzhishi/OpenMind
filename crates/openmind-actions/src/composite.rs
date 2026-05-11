@@ -3,10 +3,11 @@
 //! 支持将多个Action组合为一个新的复合Action，
 //! 实现工作流编排（如search_and_mix）。
 
-use crate::protocol::{Action, ActionContext, ActionInput, ActionOutput, ActionSchema, SchemaField};
+use crate::protocol::{
+    Action, ActionContext, ActionInput, ActionOutput, ActionSchema, SchemaField,
+};
 use async_trait::async_trait;
 use serde_json::json;
-
 
 /// 组合Action trait
 ///
@@ -52,13 +53,21 @@ impl SearchAndMixAction {
                 name: "search_and_mix".to_string(),
                 description: "混合搜索：先关键词搜索，再语义搜索，合并去重".to_string(),
                 input_fields: vec![
-                    SchemaField::new("query", "string").required().description("搜索查询"),
+                    SchemaField::new("query", "string")
+                        .required()
+                        .description("搜索查询"),
                     SchemaField::new("limit", "integer").description("每类最大结果数"),
                 ],
                 output_fields: vec![
-                    SchemaField::new("keyword_results", "array").required().description("关键词搜索结果"),
-                    SchemaField::new("semantic_results", "array").required().description("语义搜索结果"),
-                    SchemaField::new("merged_results", "array").required().description("合并去重结果"),
+                    SchemaField::new("keyword_results", "array")
+                        .required()
+                        .description("关键词搜索结果"),
+                    SchemaField::new("semantic_results", "array")
+                        .required()
+                        .description("语义搜索结果"),
+                    SchemaField::new("merged_results", "array")
+                        .required()
+                        .description("合并去重结果"),
                 ],
                 requires_auth: false,
                 rate_limit: 30,
@@ -84,7 +93,8 @@ impl Action for SearchAndMixAction {
     }
 
     async fn execute(&self, input: ActionInput, _context: ActionContext) -> ActionOutput {
-        let query = input.get_param("query")
+        let query = input
+            .get_param("query")
             .and_then(|v| v.as_str())
             .unwrap_or("");
 
@@ -92,7 +102,8 @@ impl Action for SearchAndMixAction {
             return ActionOutput::validation_err("query is required");
         }
 
-        let limit = input.get_param("limit")
+        let limit = input
+            .get_param("limit")
             .and_then(|v| v.as_u64())
             .unwrap_or(5) as usize;
 
@@ -121,7 +132,8 @@ impl CompositeAction for SearchAndMixAction {
         context: ActionContext,
         executor: &dyn ActionExecutor,
     ) -> ActionOutput {
-        let query = input.get_param("query")
+        let query = input
+            .get_param("query")
             .and_then(|v| v.as_str())
             .unwrap_or("");
 
@@ -129,25 +141,36 @@ impl CompositeAction for SearchAndMixAction {
             return ActionOutput::validation_err("query is required");
         }
 
-        let limit = input.get_param("limit")
+        let limit = input
+            .get_param("limit")
             .and_then(|v| v.as_u64())
             .unwrap_or(5) as usize;
 
         // Step 1: Keyword search
-        let keyword_input = ActionInput::new("search", json!({
-            "query": query,
-            "mode": "keyword",
-            "limit": limit
-        }));
-        let keyword_output = executor.execute_action("search", keyword_input, context.clone()).await;
+        let keyword_input = ActionInput::new(
+            "search",
+            json!({
+                "query": query,
+                "mode": "keyword",
+                "limit": limit
+            }),
+        );
+        let keyword_output = executor
+            .execute_action("search", keyword_input, context.clone())
+            .await;
 
         // Step 2: Semantic search
-        let semantic_input = ActionInput::new("search", json!({
-            "query": query,
-            "mode": "semantic",
-            "limit": limit
-        }));
-        let semantic_output = executor.execute_action("search", semantic_input, context.clone()).await;
+        let semantic_input = ActionInput::new(
+            "search",
+            json!({
+                "query": query,
+                "mode": "semantic",
+                "limit": limit
+            }),
+        );
+        let semantic_output = executor
+            .execute_action("search", semantic_input, context.clone())
+            .await;
 
         // Step 3: Merge results
         let keyword_data = keyword_output.data;
@@ -165,14 +188,21 @@ impl CompositeAction for SearchAndMixAction {
 }
 
 /// 合并搜索结果（简单去重）
-fn merge_search_results(keyword_data: &serde_json::Value, semantic_data: &serde_json::Value) -> serde_json::Value {
+fn merge_search_results(
+    keyword_data: &serde_json::Value,
+    semantic_data: &serde_json::Value,
+) -> serde_json::Value {
     let mut seen_ids = std::collections::HashSet::new();
     let mut merged = Vec::new();
 
     for data in [keyword_data, semantic_data] {
         if let Some(results) = data.get("results").and_then(|r| r.as_array()) {
             for item in results {
-                if let Some(id) = item.get("entry").and_then(|e| e.get("id")).and_then(|i| i.as_str()) {
+                if let Some(id) = item
+                    .get("entry")
+                    .and_then(|e| e.get("id"))
+                    .and_then(|i| i.as_str())
+                {
                     if seen_ids.insert(id.to_string()) {
                         merged.push(item.clone());
                     }
@@ -200,8 +230,12 @@ impl IngestAndRelateAction {
                 name: "ingest_and_relate".to_string(),
                 description: "摄入内容并自动建立知识关联".to_string(),
                 input_fields: vec![
-                    SchemaField::new("source", "string").required().description("内容来源"),
-                    SchemaField::new("content", "string").required().description("文本内容"),
+                    SchemaField::new("source", "string")
+                        .required()
+                        .description("内容来源"),
+                    SchemaField::new("content", "string")
+                        .required()
+                        .description("文本内容"),
                     SchemaField::new("auto_relate", "boolean").description("是否自动关联"),
                 ],
                 output_fields: vec![
@@ -232,11 +266,13 @@ impl Action for IngestAndRelateAction {
     }
 
     async fn execute(&self, input: ActionInput, _context: ActionContext) -> ActionOutput {
-        let source = input.get_param("source")
+        let source = input
+            .get_param("source")
             .and_then(|v| v.as_str())
             .unwrap_or("");
 
-        let content = input.get_param("content")
+        let content = input
+            .get_param("content")
             .and_then(|v| v.as_str())
             .unwrap_or("");
 
@@ -244,7 +280,8 @@ impl Action for IngestAndRelateAction {
             return ActionOutput::validation_err("source and content are required");
         }
 
-        let auto_relate = input.get_param("auto_relate")
+        let auto_relate = input
+            .get_param("auto_relate")
             .and_then(|v| v.as_bool())
             .unwrap_or(true);
 
@@ -266,10 +303,13 @@ mod tests {
     #[tokio::test]
     async fn test_search_and_mix_action() {
         let action = SearchAndMixAction::new();
-        let input = ActionInput::new("search_and_mix", json!({
-            "query": "Rust programming",
-            "limit": 5
-        }));
+        let input = ActionInput::new(
+            "search_and_mix",
+            json!({
+                "query": "Rust programming",
+                "limit": 5
+            }),
+        );
         let ctx = ActionContext::new();
 
         let output = action.execute(input, ctx).await;
@@ -284,16 +324,22 @@ mod tests {
         let ctx = ActionContext::new();
 
         let output = action.execute(input, ctx).await;
-        assert_eq!(output.status, crate::protocol::ActionStatus::ValidationError);
+        assert_eq!(
+            output.status,
+            crate::protocol::ActionStatus::ValidationError
+        );
     }
 
     #[tokio::test]
     async fn test_ingest_and_relate_action() {
         let action = IngestAndRelateAction::new();
-        let input = ActionInput::new("ingest_and_relate", json!({
-            "source": "test.md",
-            "content": "Hello world"
-        }));
+        let input = ActionInput::new(
+            "ingest_and_relate",
+            json!({
+                "source": "test.md",
+                "content": "Hello world"
+            }),
+        );
         let ctx = ActionContext::new();
 
         let output = action.execute(input, ctx).await;
