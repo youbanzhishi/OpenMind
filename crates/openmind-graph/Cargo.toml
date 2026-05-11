@@ -1,0 +1,11 @@
+[package]
+name = "openmind-graph"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+openmind-core = { path = "../openmind-core" }
+async-trait.workspace = true
+anyhow.workspace = true
+tracing.workspace = true

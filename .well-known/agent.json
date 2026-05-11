@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "name": "OpenMind",
+  "description": "AI-native personal knowledge engine - knowledge node in Agent ecosystem",
+  "version": "0.1.0",
+  "base_url": "http://localhost:9090",
+  "capabilities": [
+    {
+      "name": "semantic_search",
+      "description": "语义搜索知识库",
+      "endpoint": "POST /api/v1/search",
+      "input": { "query": "string", "mode": "keyword|semantic|hybrid", "limit": 10, "filters": {} },
+      "output": { "results": [{ "content": "string", "source": "string", "relevance": 0.0, "highlights": [] }] }
+    },
+    {
+      "name": "find_todos",
+      "description": "查找待办事项及关联文件",
+      "endpoint": "POST /api/v1/search",
+      "input": { "query": "string", "filters": { "type": "todo" } },
+      "output": { "results": [{ "content": "string", "files": ["string"], "project": "string" }] }
+    },
+    {
+      "name": "ingest",
+      "description": "摄入内容到知识库",
+      "endpoint": "POST /api/v1/ingest",
+      "input": { "source": "string", "content": "string", "metadata": {} },
+      "output": { "id": "string", "status": "indexed" }
+    },
+    {
+      "name": "get_related",
+      "description": "获取知识的关联条目",
+      "endpoint": "GET /api/v1/entry/{id}/related",
+      "input": { "id": "string", "depth": 1 },
+      "output": { "relations": [{ "entry_id": "string", "relation_type": "string", "weight": 0.0 }] }
+    }
+  ],
+  "links": {
+    "docs": "https://github.com/youbanzhishi/OpenMind#readme",
+    "source": "https://github.com/youbanzhishi/OpenMind",
+    "health": "http://localhost:9090/api/v1/health"
+  }
+}

@@ -1,0 +1,48 @@
+[workspace]
+members = [
+    "crates/openmind-core",
+    "crates/openmind-ingest",
+    "crates/openmind-search",
+    "crates/openmind-graph",
+    "crates/openmind-api",
+    "crates/openmind-cli",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["youbanzhishi"]
+license = "MIT"
+repository = "https://github.com/youbanzhishi/OpenMind"
+
+[workspace.dependencies]
+# Web framework
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Async traits
+async-trait = "0.1"
+
+# Error handling
+thiserror = "1"
+anyhow = "1"
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# UUID - pin to version compatible with getrandom 0.2 (for Rust 1.75)
+uuid = { version = ">=1.0, <1.12", features = ["v4", "serde"] }
+
+# Force-pin transitive dependency for Rust 1.75 compatibility
+getrandom = { version = "0.2", default-features = false, features = ["std"] }
