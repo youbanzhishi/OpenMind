@@ -6,6 +6,7 @@ members = [
     "crates/openmind-graph",
     "crates/openmind-api",
     "crates/openmind-cli",
+    "crates/openmind-connectors",
 ]
 resolver = "2"
 

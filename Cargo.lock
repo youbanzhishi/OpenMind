@@ -1067,6 +1067,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "openmind-connectors"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "openmind-core",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "openmind-core"
 version = "0.1.0"
 dependencies = [

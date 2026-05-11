@@ -17,6 +17,7 @@ pub mod embedding;
 pub mod vector_store;
 pub mod event_bus;
 pub mod registry;
+pub mod connector_registry;
 
 pub use models::*;
 pub use traits::*;
@@ -28,4 +29,8 @@ pub use vector_store::{
 pub use event_bus::{EventBus, Event};
 pub use registry::{
     UnifiedRegistry, ComponentDescriptor, ComponentType, Capability,
+};
+
+pub use connector_registry::{
+    ConnectorRegistry, ConnectorCapabilities, ConnectorHealth, EnhancedConnector,
 };
