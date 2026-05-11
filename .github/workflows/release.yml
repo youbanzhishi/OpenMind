@@ -1,0 +1,104 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v0.1.0)'
+        required: true
+        default: 'v0.1.0'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact: openmind-x86_64-linux
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact: openmind-aarch64-macos
+          - os: macos-13
+            target: x86_64-apple-darwin
+            artifact: openmind-x86_64-macos
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact: openmind-x86_64-windows.exe
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Install dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libssl-dev
+
+      - name: Build release
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Prepare artifact (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar czf /tmp/${{ matrix.artifact }}.tar.gz openmind
+
+      - name: Prepare artifact (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "target/${{ matrix.target }}/release/openmind.exe" -DestinationPath "C:\temp\${{ matrix.artifact }}.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            /tmp/${{ matrix.artifact }}.tar.gz
+            C:\temp\${{ matrix.artifact }}.zip
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag }}
+          name: OpenMind ${{ github.event.inputs.tag }}
+          body: |
+            OpenMind - AI-native personal knowledge engine
+
+            ## Downloads
+            - `openmind-x86_64-linux.tar.gz` - Linux x86_64
+            - `openmind-aarch64-macos.tar.gz` - macOS Apple Silicon
+            - `openmind-x86_64-macos.tar.gz` - macOS Intel
+            - `openmind-x86_64-windows.exe.zip` - Windows x86_64
+          files: |
+            artifacts/openmind-x86_64-linux/*.tar.gz
+            artifacts/openmind-aarch64-macos/*.tar.gz
+            artifacts/openmind-x86_64-macos/*.tar.gz
+            artifacts/openmind-x86_64-windows.exe/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
