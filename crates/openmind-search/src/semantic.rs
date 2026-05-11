@@ -2,8 +2,8 @@
 //!
 //! 基于向量相似度的语义搜索，通过VectorStore进行向量检索。
 
-use openmind_core::{
-    EmbeddingModel, KnowledgeStore, SearchFilters, SearchMode,
+use openmind_core::{SearchFilters,
+    EmbeddingModel, KnowledgeStore, SearchMode,
     SearchRequest, SearchResponse, SearchResult, VectorStore,
 };
 
@@ -98,7 +98,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use openmind_core::{
+    use openmind_core::{SearchFilters,
         DummyEmbeddingModel, InMemoryVectorStore, KnowledgeEntry, SqliteKnowledgeStore,
         compute_content_hash, EmbeddingStatus, EntryStatus, SourceType, VectorPoint,
     };

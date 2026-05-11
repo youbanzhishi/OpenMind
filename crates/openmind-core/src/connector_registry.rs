@@ -102,7 +102,7 @@ impl ConnectorRegistry {
     }
 
     /// 获取Connector
-    pub fn get(&self, name: &str) -> Option<std::sync::MutexGuard<'_, HashMap<String, Box<dyn EnhancedConnector>>>> {
+    pub fn get(&self, _name: &str) -> Option<std::sync::MutexGuard<'_, HashMap<String, Box<dyn EnhancedConnector>>>> {
         // Can't return the guard with a reference, need different approach
         None
     }

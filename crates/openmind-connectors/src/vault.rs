@@ -6,7 +6,7 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use openmind_core::{
-    Connector, ContentChange, ContentItem, FileReference,
+    Connector, ContentChange, ContentItem,
     compute_content_hash,
 };
 use openmind_core::connector_registry::{ConnectorCapabilities, EnhancedConnector};
