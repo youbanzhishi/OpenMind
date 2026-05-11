@@ -10,10 +10,14 @@ use axum::{
     Router,
 };
 use openmind_core::{
-    HealthResponse, IngestRequest, IngestResponse, SearchRequest, SearchResponse,
+    compute_content_hash, EmbeddingStatus, EntryStatus,
+    HealthResponse, IngestRequest, IngestResponse, KnowledgeEntry,
+    KnowledgeStats, KnowledgeStore, SearchMode,
+    SearchRequest, SearchResponse, SourceType,
 };
 use serde_json::{json, Value};
 use std::sync::Arc;
+use uuid::Uuid;
 
 use crate::AppState;
 
@@ -28,6 +32,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/api/v1/sync/:source", post(trigger_sync))
         .route("/api/v1/connectors", get(list_connectors))
         .route("/api/v1/health", get(health))
+        .route("/api/v1/stats", get(stats))
         // Agent discovery
         .route("/.well-known/agent.json", get(agent_discovery))
         .with_state(state)
@@ -35,39 +40,99 @@ pub fn create_router(state: Arc<AppState>) -> Router {
 
 /// POST /api/v1/search - 搜索（keyword/semantic/hybrid）
 async fn search(
-    State(_state): State<Arc<AppState>>,
-    Json(_req): Json<SearchRequest>,
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<SearchRequest>,
 ) -> Result<Json<SearchResponse>, StatusCode> {
-    // TODO: Implement with actual search engine
-    Err(StatusCode::NOT_IMPLEMENTED)
+    let limit = req.limit.unwrap_or(10);
+    let store = &*state.store;
+    let results = store
+        .query_keyword(&req.query, limit, &req.filters)
+        .await
+        .map_err(|e| {
+            tracing::error!("Search error: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    let total = results.len();
+    Ok(Json(SearchResponse {
+        results,
+        mode: SearchMode::Keyword,
+        total,
+        degraded: false,
+    }))
 }
 
 /// POST /api/v1/ingest - 摄入内容
 async fn ingest(
-    State(_state): State<Arc<AppState>>,
-    Json(_req): Json<IngestRequest>,
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<IngestRequest>,
 ) -> Result<Json<IngestResponse>, StatusCode> {
-    // TODO: Implement with actual ingestion pipeline
-    Err(StatusCode::NOT_IMPLEMENTED)
+    let now = chrono::Utc::now();
+    let title = req.metadata
+        .get("title")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+
+    let entry = KnowledgeEntry {
+        id: Uuid::new_v4().to_string(),
+        source_type: SourceType::File,
+        source_id: req.source.clone(),
+        title: title.to_string(),
+        content: req.content.clone(),
+        content_hash: compute_content_hash(&req.content),
+        embedding_id: None,
+        embedding_status: EmbeddingStatus::Pending,
+        tags: req.tags.clone(),
+        project: None,
+        metadata: req.metadata.clone(),
+        file_references: vec![],
+        created_at: now,
+        updated_at: now,
+        status: EntryStatus::Active,
+    };
+
+    let id = entry.id.clone();
+    state.store.store(entry).await.map_err(|e| {
+        tracing::error!("Ingest error: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(IngestResponse {
+        id,
+        status: "indexed".to_string(),
+    }))
 }
 
 /// GET /api/v1/entry/:id - 获取知识条目
 async fn get_entry(
-    State(_state): State<Arc<AppState>>,
-    Path(_id): Path<String>,
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
 ) -> Result<Json<Value>, StatusCode> {
-    // TODO: Implement with actual store
-    Err(StatusCode::NOT_IMPLEMENTED)
+    let entry = state.store.get(&id).await.map_err(|e| {
+        tracing::error!("Get entry error: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    match entry {
+        Some(e) => Ok(Json(serde_json::to_value(e).unwrap_or_default())),
+        None => Err(StatusCode::NOT_FOUND),
+    }
 }
 
 /// GET /api/v1/entry/:id/related - 获取关联知识
 async fn get_related(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Path(id): Path<String>,
 ) -> Result<Json<Value>, StatusCode> {
-    // TODO: Implement with actual graph
-    let _id = id;
-    Err(StatusCode::NOT_IMPLEMENTED)
+    let relations = state.store.get_related(&id, 1).await.map_err(|e| {
+        tracing::error!("Get related error: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(json!({
+        "entry_id": id,
+        "relations": relations,
+    })))
 }
 
 /// POST /api/v1/sync/:source - 触发同步
@@ -76,8 +141,11 @@ async fn trigger_sync(
     Path(source): Path<String>,
 ) -> Result<Json<Value>, StatusCode> {
     // TODO: Implement with actual connector
-    let _ = source;
-    Err(StatusCode::NOT_IMPLEMENTED)
+    Ok(Json(json!({
+        "source": source,
+        "status": "not_implemented",
+        "message": "Connector sync not yet implemented"
+    })))
 }
 
 /// GET /api/v1/connectors - 列出已注册Connector
@@ -93,11 +161,29 @@ async fn list_connectors(
 async fn health(
     State(state): State<Arc<AppState>>,
 ) -> Json<HealthResponse> {
+    let embedding_status = if state.embedding_available {
+        "healthy".to_string()
+    } else {
+        "degraded".to_string()
+    };
+
     Json(HealthResponse {
         status: "ok".to_string(),
         version: state.version.clone(),
         connectors: state.connectors.clone(),
+        embedding_status,
     })
+}
+
+/// GET /api/v1/stats - 知识库统计
+async fn stats(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<KnowledgeStats>, StatusCode> {
+    let stats = state.store.stats().await.map_err(|e| {
+        tracing::error!("Stats error: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+    Ok(Json(stats))
 }
 
 /// GET /.well-known/agent.json - Agent发现

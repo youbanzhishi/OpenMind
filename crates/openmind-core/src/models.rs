@@ -5,6 +5,110 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+/// 知识条目状态
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum EntryStatus {
+    Active,
+    Archived,
+    Pending,
+    Error,
+}
+
+impl Default for EntryStatus {
+    fn default() -> Self {
+        Self::Active
+    }
+}
+
+impl EntryStatus {
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Active => "active",
+            Self::Archived => "archived",
+            Self::Pending => "pending",
+            Self::Error => "error",
+        }
+    }
+
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "active" => Some(Self::Active),
+            "archived" => Some(Self::Archived),
+            "pending" => Some(Self::Pending),
+            "error" => Some(Self::Error),
+            _ => None,
+        }
+    }
+}
+
+/// 嵌入状态 —— 追踪每条知识的向量化进度
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum EmbeddingStatus {
+    Embedded,
+    Pending,
+    Failed(String),
+    Skipped,
+}
+
+impl Default for EmbeddingStatus {
+    fn default() -> Self {
+        Self::Pending
+    }
+}
+
+impl EmbeddingStatus {
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Embedded => "embedded",
+            Self::Pending => "pending",
+            Self::Failed(_) => "failed",
+            Self::Skipped => "skipped",
+        }
+    }
+
+    pub fn from_str_simple(s: &str) -> Self {
+        match s {
+            "embedded" => Self::Embedded,
+            "pending" => Self::Pending,
+            "skipped" => Self::Skipped,
+            other => Self::Failed(other.to_string()),
+        }
+    }
+}
+
+/// 数据源类型
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum SourceType {
+    Blog,
+    Vault,
+    Bookmark,
+    Note,
+    File,
+}
+
+impl SourceType {
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Blog => "blog",
+            Self::Vault => "vault",
+            Self::Bookmark => "bookmark",
+            Self::Note => "note",
+            Self::File => "file",
+        }
+    }
+
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "blog" => Some(Self::Blog),
+            "vault" => Some(Self::Vault),
+            "bookmark" => Some(Self::Bookmark),
+            "note" => Some(Self::Note),
+            "file" => Some(Self::File),
+            _ => None,
+        }
+    }
+}
+
 /// 知识条目
 ///
 /// 知识库的基本单元，包含文本内容及其元数据。
@@ -13,47 +117,34 @@ use serde::{Deserialize, Serialize};
 pub struct KnowledgeEntry {
     /// 唯一标识
     pub id: String,
-    /// 来源标识（如 "vault:notes/daily.md", "blog:post/123"）
-    pub source: String,
+    /// 数据源类型
+    pub source_type: SourceType,
+    /// 数据源中的原始ID
+    pub source_id: String,
+    /// 标题
+    pub title: String,
     /// 文本内容
     pub content: String,
+    /// 内容哈希（SHA-256，用于去重和变更检测）
+    pub content_hash: String,
     /// 向量嵌入ID（在向量数据库中的引用）
     pub embedding_id: Option<String>,
-    /// 元数据（自由键值对）
-    pub metadata: EntryMetadata,
+    /// 嵌入状态（降级容灾关键字段）
+    pub embedding_status: EmbeddingStatus,
     /// 标签
     pub tags: Vec<String>,
+    /// 所属项目
+    pub project: Option<String>,
+    /// 元数据（自由键值对）
+    pub metadata: serde_json::Value,
+    /// 大文件引用列表
+    pub file_references: Vec<FileReference>,
     /// 创建时间
     pub created_at: DateTime<Utc>,
     /// 更新时间
     pub updated_at: DateTime<Utc>,
-}
-
-/// 知识条目元数据
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EntryMetadata {
-    /// 内容类型（markdown/text/html/bookmark/note/todo）
-    pub content_type: String,
-    /// 原始URL（如果来自网页）
-    pub url: Option<String>,
-    /// 作者
-    pub author: Option<String>,
-    /// 所属项目
-    pub project: Option<String>,
-    /// 附加属性
-    pub extra: serde_json::Value,
-}
-
-impl Default for EntryMetadata {
-    fn default() -> Self {
-        Self {
-            content_type: "text".to_string(),
-            url: None,
-            author: None,
-            project: None,
-            extra: serde_json::Value::Null,
-        }
-    }
+    /// 条目状态
+    pub status: EntryStatus,
 }
 
 /// 大文件引用
@@ -64,8 +155,6 @@ impl Default for EntryMetadata {
 pub struct FileReference {
     /// 唯一标识
     pub id: String,
-    /// 所属知识条目ID
-    pub entry_id: String,
     /// 存储后端名称（如 "vault", "s3"）
     pub storage_backend: String,
     /// 文件访问URL
@@ -83,14 +172,20 @@ pub struct FileReference {
 /// 描述知识条目之间的关系，支持带权重的有向图。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KnowledgeRelation {
+    /// 关联ID
+    pub id: String,
     /// 起始条目ID
     pub from_id: String,
     /// 目标条目ID
     pub to_id: String,
-    /// 关系类型（如 "references", "similar_to", "derived_from", "tagged_with"）
+    /// 关系类型（如 "similar_to", "derived_from", "references", "contradicts", "part_of"）
     pub relation_type: String,
     /// 关系权重（0.0-1.0）
     pub weight: f64,
+    /// 关联元数据
+    pub metadata: serde_json::Value,
+    /// 创建时间
+    pub created_at: DateTime<Utc>,
 }
 
 /// 同步状态
@@ -98,12 +193,20 @@ pub struct KnowledgeRelation {
 /// 记录每个数据源的同步进度，用于增量同步。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyncState {
-    /// 数据源标识
-    pub source: String,
+    /// 数据源标识（Connector名称）
+    pub connector_name: String,
     /// 最后同步时间
-    pub last_sync: DateTime<Utc>,
+    pub last_sync_at: DateTime<Utc>,
     /// 内容哈希（用于快速变更检测）
     pub content_hash: Option<String>,
+    /// 同步状态
+    pub status: String,
+    /// 错误信息
+    pub last_error: Option<String>,
+    /// 同步总数
+    pub total_synced: i64,
+    /// 错误总数
+    pub total_errors: i64,
 }
 
 /// 搜索结果
@@ -139,8 +242,10 @@ pub struct ContentItem {
     pub content_type: String,
     /// 文本内容
     pub content: String,
+    /// 标题
+    pub title: Option<String>,
     /// 元数据
-    pub metadata: EntryMetadata,
+    pub metadata: serde_json::Value,
     /// 关联的大文件
     pub file_references: Vec<FileReference>,
     /// 标签
@@ -161,7 +266,7 @@ pub struct SearchRequest {
 }
 
 /// 搜索模式
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum SearchMode {
     /// 关键词搜索
@@ -189,6 +294,10 @@ pub struct SearchFilters {
     pub tags: Vec<String>,
     /// 项目过滤
     pub project: Option<String>,
+    /// 开始日期
+    pub date_from: Option<DateTime<Utc>>,
+    /// 结束日期
+    pub date_to: Option<DateTime<Utc>>,
 }
 
 impl Default for SearchFilters {
@@ -198,6 +307,8 @@ impl Default for SearchFilters {
             source: None,
             tags: Vec::new(),
             project: None,
+            date_from: None,
+            date_to: None,
         }
     }
 }
@@ -211,6 +322,8 @@ pub struct SearchResponse {
     pub mode: SearchMode,
     /// 总结果数
     pub total: usize,
+    /// 是否降级
+    pub degraded: bool,
 }
 
 /// 摄入请求
@@ -221,7 +334,7 @@ pub struct IngestRequest {
     /// 内容
     pub content: String,
     /// 元数据
-    pub metadata: EntryMetadata,
+    pub metadata: serde_json::Value,
     /// 标签
     pub tags: Vec<String>,
 }
@@ -244,4 +357,21 @@ pub struct HealthResponse {
     pub version: String,
     /// 已注册Connector列表
     pub connectors: Vec<String>,
+    /// 嵌入模型状态
+    pub embedding_status: String,
+}
+
+/// 知识库统计
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KnowledgeStats {
+    /// 总条目数
+    pub total_entries: i64,
+    /// 各来源条目数
+    pub by_source: serde_json::Value,
+    /// 嵌入状态统计
+    pub by_embedding_status: serde_json::Value,
+    /// 总关联数
+    pub total_relations: i64,
+    /// 总标签数
+    pub total_tags: i64,
 }

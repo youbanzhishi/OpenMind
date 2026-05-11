@@ -2,7 +2,9 @@
 //!
 //! 基于语义相似度和元数据关联构建知识图谱。
 
+use chrono::Utc;
 use openmind_core::{KnowledgeEntry, KnowledgeRelation, KnowledgeStore};
+use uuid::Uuid;
 
 /// 知识图谱构建器
 pub struct GraphBuilder<K: KnowledgeStore> {
@@ -29,10 +31,13 @@ impl<K: KnowledgeStore> GraphBuilder<K> {
                 // Similarity check would use embedding vectors
                 // For now, create a placeholder relation structure
                 let relation = KnowledgeRelation {
+                    id: Uuid::new_v4().to_string(),
                     from_id: entries[i].id.clone(),
                     to_id: entries[j].id.clone(),
                     relation_type: "similar_to".to_string(),
                     weight: 0.0, // Would be computed from cosine similarity
+                    metadata: serde_json::Value::Null,
+                    created_at: Utc::now(),
                 };
 
                 if relation.weight >= threshold {
@@ -65,10 +70,15 @@ impl<K: KnowledgeStore> GraphBuilder<K> {
                         / (entries[i].tags.len().max(entries[j].tags.len()) as f64);
 
                     let relation = KnowledgeRelation {
+                        id: Uuid::new_v4().to_string(),
                         from_id: entries[i].id.clone(),
                         to_id: entries[j].id.clone(),
                         relation_type: "tagged_with".to_string(),
                         weight,
+                        metadata: serde_json::json!({
+                            "common_tags": common_tags.iter().map(|t| t.to_string()).collect::<Vec<_>>(),
+                        }),
+                        created_at: Utc::now(),
                     };
 
                     self.store.relate(relation.clone()).await?;

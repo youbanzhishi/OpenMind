@@ -9,6 +9,10 @@
 
 pub mod models;
 pub mod traits;
+pub mod sqlite_store;
+pub mod embedding;
 
 pub use models::*;
 pub use traits::*;
+pub use sqlite_store::{SqliteKnowledgeStore, compute_content_hash};
+pub use embedding::{OpenAIEmbeddingModel, DummyEmbeddingModel};

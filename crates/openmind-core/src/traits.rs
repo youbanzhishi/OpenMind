@@ -94,6 +94,11 @@ pub trait EmbeddingModel: Send + Sync {
     async fn embed_image(&self, _image_data: &[u8]) -> anyhow::Result<Vec<f32>> {
         anyhow::bail!("Image embedding not supported by {}", self.model_name())
     }
+
+    /// 健康检查
+    async fn health_check(&self) -> bool {
+        true
+    }
 }
 
 /// 知识存储接口
@@ -118,6 +123,7 @@ pub trait KnowledgeStore: Send + Sync {
         &self,
         query: &str,
         limit: usize,
+        filters: &SearchFilters,
     ) -> anyhow::Result<Vec<SearchResult>>;
 
     /// 建立知识关联
@@ -135,6 +141,9 @@ pub trait KnowledgeStore: Send + Sync {
 
     /// 删除知识条目
     async fn delete(&self, id: &str) -> anyhow::Result<()>;
+
+    /// 获取知识库统计
+    async fn stats(&self) -> anyhow::Result<KnowledgeStats>;
 }
 
 /// 摄入管道
